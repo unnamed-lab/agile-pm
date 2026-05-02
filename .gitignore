@@ -1,0 +1,44 @@
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+apps/api/.env
+apps/web/.env.local
+
+# Build outputs
+dist/
+.next/
+build/
+out/
+
+# Node modules
+node_modules/
+pnpm-lock.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.db-journal
+
+# Test coverage
+coverage/
+*.lcov
+
+# Misc
+turbo/
+.cache/
