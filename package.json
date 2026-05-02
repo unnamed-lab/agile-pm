@@ -8,11 +8,13 @@
     "test": "turbo test",
     "db:migrate": "pnpm --filter database migrate:dev",
     "db:generate": "pnpm --filter database generate",
-    "db:studio": "pnpm --filter database studio"
+    "db:studio": "pnpm --filter database studio",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "turbo": "latest",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "husky": "^8.0.0"
   },
   "packageManager": "pnpm@9.0.0"
 }
