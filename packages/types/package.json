@@ -1,0 +1,8 @@
+{
+  "name": "@apms/types",
+  "version": "0.0.1",
+  "main": "./index.ts",
+  "dependencies": {
+    "@prisma/client": "^5.0.0"
+  }
+}
