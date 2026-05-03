@@ -1,7 +1,7 @@
 import 'dotenv/config'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from './generated/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import type { Prisma } from '@prisma/client'
+import type { Prisma } from './generated/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -20,7 +20,6 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-export * from '@prisma/client';
-export type { Prisma } from '@prisma/client';
-export { PrismaClient } from '@prisma/client';
-export type { Prisma } from '../generated/client'
+export type { Prisma } from './generated/client'
+export { PrismaClient } from './generated/client'
+

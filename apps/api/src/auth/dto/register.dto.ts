@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
-import { SystemRole } from '@apms/database';
+import { SystemRole } from '@apms/database/generated/client';
 
 export class RegisterDto {
   @IsString()

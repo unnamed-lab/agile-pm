@@ -1,0 +1,12 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "rootDir": ".",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
+  "moduleNameMapper": {
+    "@apms/database": "<rootDir>/../../packages/database"
+  },
+  "types": ["jest", "node", "supertest"],
+  "testTimeout": 50000,
+  "globalSetup": null
+}
