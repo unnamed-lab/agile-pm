@@ -66,7 +66,7 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
 
-export function KanbanBoard({ projectId, tasks }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
