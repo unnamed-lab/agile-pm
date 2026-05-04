@@ -26,11 +26,13 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!res.ok) {
-            console.error("Login API error:", res.status, await res.text());
+            const text = await res.text();
+            console.error("Login API error:", res.status, text);
             return null;
           }
 
           const data = await res.json();
+          console.log("Login API success:", data.user?.email);
           return {
             id: data.user.id,
             email: data.user.email,
