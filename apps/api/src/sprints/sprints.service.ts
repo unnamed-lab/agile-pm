@@ -39,7 +39,7 @@ export class SprintsService {
       include: {
         _count: { select: { tasks: true } },
         tasks: {
-          select: { id: true, status: true },
+          select: { id: true, status: true, title: true, storyPoints: true },
           where: { deletedAt: null },
         },
       },
