@@ -84,7 +84,7 @@ export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttC
                   style={{
                     left: `${left}%`,
                     width: `${width}%`,
-                    backgroundColor: sprintStatusColors[sprint.status],
+                    backgroundColor: sprint.color || sprintStatusColors[sprint.status],
                   }}
                   title={`${sprint.name} (${sprint.status})`}
                 >
@@ -99,7 +99,7 @@ export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttC
                       left: `${left + 1}%`,
                       top: `${idx * 5 + 14}px`,
                       width: `${width * 0.95}%`,
-                      backgroundColor: statusColors[task.status] || '#9CA3AF',
+                      backgroundColor: task.status ? (statusColors[task.status] || '#9CA3AF') : '#9CA3AF',
                     }}
                     title={`${task.title} (${task.status})`}
                   />

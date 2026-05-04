@@ -25,6 +25,7 @@ export class SprintsService {
         goal: dto.goal,
         startDate: start,
         endDate: end,
+        color: dto.color || '#10B981',
       },
     });
 

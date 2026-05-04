@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsOptional, IsString, MaxLength, IsOptional } from 'class-validator';
 
 export class CreateSprintDto {
   @IsString()
@@ -15,4 +15,9 @@ export class CreateSprintDto {
 
   @IsDateString()
   endDate: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  color?: string;
 }

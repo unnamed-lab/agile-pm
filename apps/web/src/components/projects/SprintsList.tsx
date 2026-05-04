@@ -9,6 +9,7 @@ interface Sprint {
   status: string;
   startDate: string | Date;
   endDate: string | Date;
+  color?: string;
   _count?: { tasks: number };
 }
 
@@ -35,6 +36,17 @@ const STATUS_CONFIG = {
     dot: 'bg-sky-500',
   },
 } as const;
+
+const COLOR_OPTIONS = [
+  '#10B981', // emerald
+  '#3B82F6', // blue
+  '#8B5CF6', // violet
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#EC4899', // pink
+  '#14B8A6', // teal
+  '#F97316', // orange
+];
 
 export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps) {
   const [showForm, setShowForm] = useState(false);
@@ -94,9 +106,12 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
               className="card p-4 flex items-center justify-between gap-4 hover:border-emerald-200 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: sprint.color || cfg.dot }}
+                />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-stone-900 truncate">
+                  <p className="font-medium text-sm text-stone-900 truncate">
                     {sprint.name}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5 text-xs text-stone-500">
@@ -120,6 +135,8 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
                       </>
                     )}
                   </div>
+                </div>
+              </div>
                 </div>
               </div>
 
@@ -163,6 +180,7 @@ function CreateSprintForm({
   const [goal, setGoal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [color, setColor] = useState('#10B981');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -171,7 +189,7 @@ function CreateSprintForm({
     await fetch(`/api/projects/${projectId}/sprints`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, goal, startDate, endDate }),
+      body: JSON.stringify({ name, goal, startDate, endDate, color }),
     });
     onClose();
     window.location.reload();
@@ -224,6 +242,29 @@ function CreateSprintForm({
             className="input"
             required
           />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-stone-600 mb-1">Sprint color</label>
+          <div className="flex items-center gap-2">
+            {COLOR_OPTIONS.map(c => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => setColor(c)}
+                className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                  color === c ? 'border-stone-900 scale-110' : 'border-transparent hover:border-stone-300'
+                }`}
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+            <input
+              type="color"
+              value={color}
+              onChange={e => setColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer"
+            />
+          </div>
         </div>
       </div>
       <div className="flex gap-2 pt-1">
