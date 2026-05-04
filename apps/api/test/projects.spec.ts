@@ -8,14 +8,15 @@ import { ProjectRole } from '@apms/database/generated/client';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: any;
+  let notificationsService: any;
 
   const mockUser = { id: 'user-1', name: 'Test User' };
   const mockProject = {
     id: 'project-1',
     name: 'Test Project',
     description: 'Test Desc',
-    members: [{ userId: 'user-1', role: ProjectRole.SCRUM_MASTER }),
+    members: [{ userId: 'user-1', role: ProjectRole.SCRUM_MASTER }],
   };
 
   beforeAll(async () => {
@@ -29,7 +30,9 @@ describe('ProjectsService', () => {
               create: jest.fn(),
               findMany: jest.fn(),
               findFirst: jest.fn(),
+              findUnique: jest.fn(),
               update: jest.fn(),
+              delete: jest.fn(),
             },
             projectMember: {
               findUnique: jest.fn(),
@@ -39,7 +42,7 @@ describe('ProjectsService', () => {
             },
             user: { findUnique: jest.fn() },
             task: { count: jest.fn() },
-            sprint: { findFirst: jest.fn(), count: jest.fn() },
+            sprint: { count: jest.fn(), findFirst: jest.fn() },
           },
         },
         {
@@ -55,6 +58,7 @@ describe('ProjectsService', () => {
 
     service = module.get(ProjectsService);
     prisma = module.get(PrismaService);
+    notificationsService = module.get(NotificationsService);
   });
 
   it('should create project with SCRUM_MASTER role', async () => {
@@ -67,9 +71,11 @@ describe('ProjectsService', () => {
   });
 
   it('should invite member by email', async () => {
-    jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser);
+    jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
     jest.spyOn(prisma.projectMember, 'findUnique').mockResolvedValue(null);
-    jest.spyOn(prisma.projectMember, 'create').mockResolvedValue({});
+    jest.spyOn(prisma.projectMember, 'create').mockResolvedValue({} as any);
+    jest.spyOn(prisma.project, 'findUnique').mockResolvedValue(mockProject as any);
+    jest.spyOn(notificationsService, 'create').mockResolvedValue({} as any);
 
     const result = await service.inviteMember('project-1', 'inviter-1', {
       email: '[email protected]',

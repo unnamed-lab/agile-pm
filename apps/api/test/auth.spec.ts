@@ -5,10 +5,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createUser } from './factories/user.factory';
+import { SystemRole } from '@apms/database/generated/client';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: PrismaService;
+  let prisma: any;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,7 +32,7 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prisma = module.get<PrismaService>(PrismaService);
+    prisma = module.get(PrismaService);
   });
 
   it('should register new user', async () => {
@@ -47,6 +48,7 @@ describe('AuthService', () => {
       name: 'Test',
       email: '[email protected]',
       password: '12345678',
+      role: SystemRole.STUDENT,
     });
 
     expect(result.user).toBeDefined();
@@ -61,6 +63,7 @@ describe('AuthService', () => {
         name: 'Test',
         email: '[email protected]',
         password: '12345678',
+        role: SystemRole.STUDENT,
       }),
     ).rejects.toThrow(ConflictException);
   });
@@ -74,8 +77,8 @@ describe('AuthService', () => {
       role: 'STUDENT',
     };
 
-    jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser);
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
+    jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
+    jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
 
     const result = await service.login({
       email: '[email protected]',
@@ -89,8 +92,8 @@ describe('AuthService', () => {
   it('should throw on invalid password', async () => {
     jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
       passwordHash: 'hash',
-    });
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+    } as any);
+    jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(false));
 
     await expect(
       service.login({ email: '[email protected]', password: 'wrong' }),

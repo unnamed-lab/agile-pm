@@ -3,19 +3,31 @@ import { TasksService } from '../src/tasks/tasks.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ActivityService } from '../src/activity/activity.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { TaskStatus } from '@apms/database/generated/client';
 
 describe('TasksService', () => {
   let service: TasksService;
   let prisma: jest.Mocked<PrismaService>;
 
+  const PROJECT_ID = 'project-1';
+
   const mockTask = {
     id: 'task-1',
     title: 'Test Task',
     status: TaskStatus.TODO,
-    projectId: 'project-1',
-  };
+    projectId: PROJECT_ID,
+    description: 'Test',
+    storyPoints: 0,
+    priority: 'MEDIUM',
+    assigneeId: null,
+    creatorId: 'user-1',
+    sprintId: null,
+    position: 1000,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  } as any;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -54,9 +66,7 @@ describe('TasksService', () => {
     jest.spyOn(prisma.task, 'findFirst').mockResolvedValue(null);
     jest.spyOn(prisma.task, 'create').mockResolvedValue(mockTask);
 
-    const result = await service.create('project-1', 'user-1', {
-      title: 'Test',
-    });
+    const result = await service.create(PROJECT_ID, 'user-1', { title: 'Test' });
 
     expect(result).toEqual(mockTask);
   });
@@ -69,7 +79,7 @@ describe('TasksService', () => {
       status: TaskStatus.IN_PROGRESS,
     });
 
-    const result = await service.moveTask('task-1', 'user-1', {
+    const result = await service.moveTask(PROJECT_ID, 'task-1', 'user-1', {
       status: TaskStatus.IN_PROGRESS,
     });
 
@@ -79,21 +89,18 @@ describe('TasksService', () => {
   it('should update task', async () => {
     const task = { ...mockTask, title: 'Old' };
     jest.spyOn(prisma.task, 'findFirst').mockResolvedValue(task);
-    jest.spyOn(prisma.task, 'update').mockResolvedValue({
-      ...task,
-      title: 'New',
-    });
+    jest.spyOn(prisma.task, 'update').mockResolvedValue({ ...task, title: 'New' });
 
-    const result = await service.update('task-1', 'user-1', { title: 'New' });
+    const result = await service.update(PROJECT_ID, 'task-1', 'user-1', { title: 'New' });
 
     expect(result.title).toBe('New');
   });
 
   it('should remove task with soft delete', async () => {
     jest.spyOn(prisma.task, 'findFirst').mockResolvedValue(mockTask);
-    jest.spyOn(prisma.task, 'update').mockResolvedValue({});
+    jest.spyOn(prisma.task, 'update').mockResolvedValue({} as any);
 
-    const result = await service.remove('task-1', 'user-1');
+    await service.remove(PROJECT_ID, 'task-1', 'user-1');
 
     expect(prisma.task.update).toHaveBeenCalledWith({
       where: { id: 'task-1' },
@@ -104,6 +111,6 @@ describe('TasksService', () => {
   it('should throw on task not found', async () => {
     jest.spyOn(prisma.task, 'findFirst').mockResolvedValue(null);
 
-    await expect(service.findOne('task-999')).rejects.toThrow(NotFoundException);
+    await expect(service.findOne(PROJECT_ID, 'task-999')).rejects.toThrow(NotFoundException);
   });
 });

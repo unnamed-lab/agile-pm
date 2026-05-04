@@ -8,14 +8,20 @@ import { SprintStatus } from '@apms/database/generated/client';
 
 describe('SprintsService', () => {
   let service: SprintsService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: any;
 
   const mockSprint = {
     id: 'sprint-1',
     name: 'Test Sprint',
     projectId: 'project-1',
     status: SprintStatus.PLANNED,
-  };
+    goal: 'Test goal',
+    startDate: new Date(),
+    endDate: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  } as any;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -75,9 +81,10 @@ describe('SprintsService', () => {
   });
 
   it('should start sprint', async () => {
-    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue(null); // no active sprint
-    jest.spyOn(prisma.sprint, 'update').mockResolvedValue({ ...mockSprint, status: SprintStatus.ACTIVE });
-    jest.spyOn(prisma.project, 'update').mockResolvedValue({});
+    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue(null);
+    jest.spyOn(prisma.sprint, 'update').mockResolvedValue({ ...mockSprint, status: SprintStatus.ACTIVE } as any);
+    jest.spyOn(prisma.project, 'update').mockResolvedValue({} as any);
+    jest.spyOn(prisma.projectMember, 'findMany').mockResolvedValue([]);
 
     const result = await service.startSprint('project-1', 'sprint-1', 'user-1');
 
@@ -85,7 +92,7 @@ describe('SprintsService', () => {
   });
 
   it('should throw when starting while another sprint is active', async () => {
-    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue({ name: 'Active Sprint' });
+    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue({ name: 'Active Sprint' } as any);
 
     await expect(
       service.startSprint('project-1', 'sprint-1', 'user-1'),
@@ -97,10 +104,12 @@ describe('SprintsService', () => {
       ...mockSprint,
       tasks: [{ id: 'task-1', status: 'IN_PROGRESS' }],
     };
-    jest.spyOn(prisma.sprint, 'findUnique').mockResolvedValue(sprintWithTasks);
-    jest.spyOn(prisma.task, 'updateMany').mockResolvedValue({});
-    jest.spyOn(prisma.sprint, 'update').mockResolvedValue({ ...mockSprint, status: SprintStatus.COMPLETED });
-    jest.spyOn(prisma.project, 'update').mockResolvedValue({});
+    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue(sprintWithTasks as any);
+    (prisma.task.findMany as jest.Mock).mockResolvedValue([{ id: 'task-1', status: 'IN_PROGRESS' }] as any);
+    jest.spyOn(prisma.task, 'updateMany').mockResolvedValue({ count: 1 } as any);
+    jest.spyOn(prisma.sprint, 'update').mockResolvedValue({ ...mockSprint, status: SprintStatus.COMPLETED } as any);
+    jest.spyOn(prisma.project, 'update').mockResolvedValue({} as any);
+    (prisma.projectMember.findMany as jest.Mock).mockResolvedValue([]);
 
     const result = await service.completeSprint('project-1', 'sprint-1', 'user-1');
 
@@ -111,6 +120,7 @@ describe('SprintsService', () => {
   it('should get burndown data', async () => {
     const sprintWithTasks = {
       id: 'sprint-1',
+      projectId: 'project-1',
       startDate: new Date('2026-01-01'),
       endDate: new Date('2026-01-03'),
       tasks: [
@@ -118,11 +128,11 @@ describe('SprintsService', () => {
         { status: 'IN_PROGRESS', storyPoints: 5, updatedAt: new Date() },
       ],
     };
-    jest.spyOn(prisma.sprint, 'findUnique').mockResolvedValue(sprintWithTasks);
+    jest.spyOn(prisma.sprint, 'findFirst').mockResolvedValue(sprintWithTasks as any);
 
-    const result = await service.getBurndownData('sprint-1');
+    const result = await service.getBurndownData('project-1', 'sprint-1');
 
     expect(result).toBeInstanceOf(Array);
-    expect(result.length).toBe(3); // 3 days
+    expect(result.length).toBe(3);
   });
 });

@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "../src/app.module";
+import { PrismaService } from "../src/prisma/prisma.service";
 
-describe('Auth (e2e)', () => {
+describe("Auth (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -31,14 +31,14 @@ describe('Auth (e2e)', () => {
     await app.close();
   });
 
-  describe('POST /auth/register', () => {
-    it('should register new user', async () => {
+  describe("POST /register", () => {
+    it("should register new user", async () => {
       const res = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post("/register")
         .send({
-          name: 'Test User',
+          name: "Test User",
           email: `test${Date.now()}@example.com`,
-          password: 'password123',
+          password: "password123",
         })
         .expect(201);
 
@@ -46,49 +46,49 @@ describe('Auth (e2e)', () => {
       expect(res.body.access_token).toBeDefined();
     });
 
-    it('should reject duplicate email', async () => {
+    it("should reject duplicate email", async () => {
       const email = `duplicate${Date.now()}@example.com`;
 
       // First registration
       await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'User1', email, password: 'pass1' })
+        .post("/register")
+        .send({ name: "User1", email, password: "pass1" })
         .expect(201);
 
       // Duplicate registration
       await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'User2', email, password: 'pass2' })
+        .post("/register")
+        .send({ name: "User2", email, password: "pass2" })
         .expect(409);
     });
   });
 
-  describe('POST /auth/login', () => {
-    it('should login with valid credentials', async () => {
+  describe("POST /login", () => {
+    it("should login with valid credentials", async () => {
       const email = `login${Date.now()}@example.com`;
 
       await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Login Test', email, password: 'password123' });
+        .post("/register")
+        .send({ name: "Login Test", email, password: "password123" });
 
       const res = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email, password: 'password123' })
+        .post("/login")
+        .send({ email, password: "password123" })
         .expect(200);
 
       expect(res.body.access_token).toBeDefined();
     });
 
-    it('should reject invalid password', async () => {
+    it("should reject invalid password", async () => {
       const email = `login2${Date.now()}@example.com`;
 
       await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Login Test', email, password: 'password123' });
+        .post("/register")
+        .send({ name: "Login Test", email, password: "password123" });
 
       await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email, password: 'wrong' })
+        .post("/login")
+        .send({ email, password: "wrong" })
         .expect(401);
     });
   });
