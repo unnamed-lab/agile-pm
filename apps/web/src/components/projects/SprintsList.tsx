@@ -137,6 +137,47 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
                   </div>
                 </div>
               </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {sprint.status === 'PLANNING' && (
+                  <button
+                    onClick={() => updateSprint(sprint.id, 'start')}
+                    className="btn-primary py-1.5 px-3"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    Start
+                  </button>
+                )}
+                {sprint.status === 'ACTIVE' && (
+                  <button
+                    onClick={() => updateSprint(sprint.id, 'complete')}
+                    className="btn-secondary py-1.5 px-3"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Complete
+                  </button>
+                )}
+                <span className={cfg.className}>{cfg.label}</span>
+              </div>
+            </div>
+          );
+        })}
+                      {' – '}
+                      {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                    {sprint._count?.tasks !== undefined && (
+                      <>
+                        <ChevronRight className="w-3 h-3" />
+                        <span>{sprint._count.tasks} tasks</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
                 </div>
               </div>
 
