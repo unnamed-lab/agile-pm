@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Sprout, CheckCircle2 } from "lucide-react";
 import { Suspense } from "react";
-import api from "@/lib/api";
+import { signIn } from "next-auth/react";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -30,15 +30,22 @@ function LoginForm() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      const response = await api.post("/login", data);
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      router.push("/dashboard");
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+      });
+
+      if (result?.error) {
+        setError("root", {
+          message: "Login failed. Check your credentials.",
+        });
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError("root", {
-        message:
-          err.response?.data?.message ||
-          "Login failed. Check your credentials.",
+        message: "Login failed. Check your credentials.",
       });
     }
   };
