@@ -7,14 +7,15 @@ import Link from "next/link";
 import { BarChart3, ChevronRight } from "lucide-react";
 
 interface ProjectPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const res = await apiFetch(`/projects/${params.id}`);
+  const res = await apiFetch(`/projects/${id}`);
   if (!res.ok) notFound();
 
   const project = await res.json();
@@ -44,7 +45,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           )}
         </div>
         <Link
-          href={`/supervisor/${params.id}`}
+          href={`/supervisor/${id}`}
           className="btn-secondary shrink-0"
         >
           <BarChart3 className="w-4 h-4" />
