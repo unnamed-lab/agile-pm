@@ -14,7 +14,7 @@ interface WBSChartProps {
   groupBy?: 'status' | 'priority' | 'assignee';
 }
 
-export function WBSChart({ tasks, groupBy = 'status' }: WBSChartProps) {
+export function WBSChart({ tasks = [], groupBy = 'status' }: WBSChartProps) {
   const groups: Record<string, typeof tasks> = {};
 
   tasks.forEach(task => {

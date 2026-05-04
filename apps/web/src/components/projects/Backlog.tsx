@@ -24,7 +24,7 @@ interface BacklogProps {
   sprints?: Sprint[];
 }
 
-export function Backlog({ projectId, tasks, sprints = [] }: BacklogProps) {
+export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
 
