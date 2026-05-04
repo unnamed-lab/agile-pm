@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         const baseUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
         try {
-          console.log("Attempting login for:", credentials.email);
+          console.log("Attempting login for:", credentials.email, "to URL:", `${baseUrl}/auth/login`);
           const res = await fetch(`${baseUrl}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           const text = await res.text();
-          console.log("Login API status:", res.status, "Response:", text.substring(0, 200));
+          console.log("Login API status:", res.status, "Response preview:", text.substring(0, 200));
 
           if (!res.ok) {
             console.error("Login API error:", res.status, text);
