@@ -12,6 +12,7 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
+
   async register(dto: RegisterDto) {
     const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (exists) throw new ConflictException('Email already registered');

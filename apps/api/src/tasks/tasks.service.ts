@@ -15,6 +15,7 @@ export class TasksService {
     private notifications: NotificationsService,
   ) {}
 
+
   async create(projectId: string, userId: string, dto: CreateTaskDto) {
     if (dto.sprintId) {
       const sprint = await this.prisma.sprint.findFirst({
@@ -84,18 +85,18 @@ export class TasksService {
     });
   }
 
-  async findOne(taskId: string) {
+  async findOne(projectId: string, taskId: string) {
     const task = await this.prisma.task.findFirst({
-      where: { id: taskId, deletedAt: null },
-      include: this.taskIncludes(true),
+      where: { id: taskId, projectId, deletedAt: null },
+      include: this.taskIncludes(),
     });
     if (!task) throw new NotFoundException('Task not found');
     return task;
   }
 
-  async update(taskId: string, userId: string, dto: UpdateTaskDto) {
+  async update(projectId: string, taskId: string, userId: string, dto: UpdateTaskDto) {
     const task = await this.prisma.task.findFirst({
-      where: { id: taskId, deletedAt: null },
+      where: { id: taskId, projectId, deletedAt: null },
     });
     if (!task) throw new NotFoundException('Task not found');
 
@@ -110,7 +111,15 @@ export class TasksService {
 
     const updated = await this.prisma.task.update({
       where: { id: taskId },
-      data: dto,
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.priority !== undefined && { priority: dto.priority }),
+        ...(dto.storyPoints !== undefined && { storyPoints: dto.storyPoints }),
+        ...(dto.assigneeId !== undefined && { assigneeId: dto.assigneeId }),
+        ...(dto.sprintId !== undefined && { sprintId: dto.sprintId }),
+      },
       include: this.taskIncludes(),
     });
 
@@ -131,9 +140,9 @@ export class TasksService {
     return updated;
   }
 
-  async moveTask(taskId: string, userId: string, dto: MoveTaskDto) {
+  async moveTask(projectId: string, taskId: string, userId: string, dto: MoveTaskDto) {
     const task = await this.prisma.task.findFirst({
-      where: { id: taskId, deletedAt: null },
+      where: { id: taskId, projectId, deletedAt: null },
     });
     if (!task) throw new NotFoundException('Task not found');
 
@@ -172,9 +181,9 @@ export class TasksService {
     return updated;
   }
 
-  async remove(taskId: string, userId: string) {
+  async remove(projectId: string, taskId: string, userId: string) {
     const task = await this.prisma.task.findFirst({
-      where: { id: taskId, deletedAt: null },
+      where: { id: taskId, projectId, deletedAt: null },
     });
     if (!task) throw new NotFoundException('Task not found');
 
@@ -191,17 +200,11 @@ export class TasksService {
     return { message: 'Task deleted' };
   }
 
-  private taskIncludes(includeComments = false) {
+  private taskIncludes() {
     return {
       assignee: { select: { id: true, name: true, avatarUrl: true } },
       creator: { select: { id: true, name: true } },
       sprint: { select: { id: true, name: true, status: true } },
-      ...(includeComments && {
-        comments: {
-          include: { author: { select: { id: true, name: true, avatarUrl: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      }),
     };
   }
 }

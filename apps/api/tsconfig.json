@@ -19,6 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@apms/database": ["../../packages/database"],
+      "@apms/database/generated/client": ["../../node_modules/@prisma/client"],
+      "@apms/database/generated/enums": ["../../packages/database/generated/enums"],
       "@apms/types": ["../../packages/types"]
     }
   }

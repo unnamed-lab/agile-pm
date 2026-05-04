@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -13,7 +13,12 @@ export class ProjectsService {
     private notifications: NotificationsService,
   ) {}
 
+
   async create(userId: string, dto: CreateProjectDto) {
+    if (dto.supervisorId) {
+      await this.validateSupervisorId(dto.supervisorId);
+    }
+
     const project = await this.prisma.project.create({
       data: {
         name: dto.name,
@@ -54,13 +59,32 @@ export class ProjectsService {
   }
 
   async update(projectId: string, userId: string, data: Partial<CreateProjectDto>) {
+    if (data.supervisorId) {
+      await this.validateSupervisorId(data.supervisorId);
+    }
+
     const project = await this.prisma.project.update({
       where: { id: projectId },
-      data,
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.supervisorId !== undefined && { supervisorId: data.supervisorId }),
+      },
       include: this.projectIncludes(),
     });
     await this.activity.log(projectId, userId, 'PROJECT_UPDATED', { changes: data });
     return project;
+  }
+
+  private async validateSupervisorId(supervisorId: string) {
+    const supervisor = await this.prisma.user.findUnique({
+      where: { id: supervisorId },
+      select: { id: true, role: true },
+    });
+    if (!supervisor) throw new NotFoundException('Supervisor user not found');
+    if (supervisor.role !== 'SUPERVISOR') {
+      throw new BadRequestException('The specified user does not have the SUPERVISOR role');
+    }
   }
 
   async softDelete(projectId: string, userId: string) {
@@ -109,7 +133,9 @@ export class ProjectsService {
       where: { projectId_userId: { projectId, userId: targetUserId } },
     });
 
-    if (targetMember?.role === 'SCRUM_MASTER' && scrumMasters <= 1) {
+    if (!targetMember) throw new NotFoundException('Member not found in this project');
+
+    if (targetMember.role === 'SCRUM_MASTER' && scrumMasters <= 1) {
       throw new ForbiddenException('Cannot remove the only Scrum Master');
     }
 

@@ -23,4 +23,9 @@ export class UsersController {
   search(@Query('email') email: string) {
     return this.usersService.searchByEmail(email);
   }
+
+  @Get('supervisors')
+  getSupervisors() {
+    return this.usersService.findSupervisors();
+  }
 }

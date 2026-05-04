@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ActivityService {
   constructor(private prisma: PrismaService) {}
 
+
   async log(projectId: string, userId: string, action: string, details: any) {
     return this.prisma.activityLog.create({
       data: {

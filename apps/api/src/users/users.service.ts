@@ -30,8 +30,16 @@ export class UsersService {
   async searchByEmail(email: string) {
     return this.prisma.user.findMany({
       where: { email: { contains: email, mode: 'insensitive' } },
-      select: { id: true, name: true, email: true, avatarUrl: true, role: true },
+      select: { id: true, name: true, email: true, avatarUrl: true },
       take: 10,
+    });
+  }
+
+  async findSupervisors() {
+    return this.prisma.user.findMany({
+      where: { role: 'SUPERVISOR' },
+      select: { id: true, name: true, email: true, avatarUrl: true },
+      orderBy: { name: 'asc' },
     });
   }
 }

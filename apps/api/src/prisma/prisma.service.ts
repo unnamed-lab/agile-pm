@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import {
   Injectable,
   OnModuleInit,
@@ -7,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@apms/database/generated/client';
+import { PrismaClient, TaskStatus, SprintStatus, Priority, ProjectRole, SystemRole } from '@apms/database/generated/client';
+
+// Re-export enums for backward compatibility
+export { TaskStatus, SprintStatus, Priority, ProjectRole, SystemRole };
 
 @Injectable()
 export class PrismaService
@@ -17,7 +19,10 @@ export class PrismaService
   private logger = new Logger(PrismaService.name);
 
   constructor() {
-    const connectionString = `${process.env.DATABASE_URL}`;
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
 
     const isLocal =
       connectionString.includes('localhost') ||
@@ -25,7 +30,7 @@ export class PrismaService
 
     const pool = new Pool({
       connectionString,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
+      ssl: isLocal ? false : { rejectUnauthorized: true },
     });
 
     const adapter = new PrismaPg(pool);

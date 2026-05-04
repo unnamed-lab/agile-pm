@@ -12,6 +12,7 @@ export class SprintsService {
     private notifications: NotificationsService,
   ) {}
 
+
   async create(projectId: string, userId: string, dto: CreateSprintDto) {
     const start = new Date(dto.startDate);
     const end = new Date(dto.endDate);
@@ -45,9 +46,9 @@ export class SprintsService {
     });
   }
 
-  async findOne(sprintId: string) {
-    const sprint = await this.prisma.sprint.findUnique({
-      where: { id: sprintId },
+  async findOne(projectId: string, sprintId: string) {
+    const sprint = await this.prisma.sprint.findFirst({
+      where: { id: sprintId, projectId },
       include: {
         tasks: {
           where: { deletedAt: null },
@@ -92,8 +93,8 @@ export class SprintsService {
   }
 
   async completeSprint(projectId: string, sprintId: string, userId: string) {
-    const sprint = await this.prisma.sprint.findUnique({
-      where: { id: sprintId },
+    const sprint = await this.prisma.sprint.findFirst({
+      where: { id: sprintId, projectId },
     });
     if (!sprint) throw new NotFoundException('Sprint not found');
 
@@ -132,9 +133,9 @@ export class SprintsService {
     return updatedSprint;
   }
 
-  async getBurndownData(sprintId: string) {
-    const sprint = await this.prisma.sprint.findUnique({
-      where: { id: sprintId },
+  async getBurndownData(projectId: string, sprintId: string) {
+    const sprint = await this.prisma.sprint.findFirst({
+      where: { id: sprintId, projectId },
       include: {
         tasks: {
           where: { deletedAt: null },
