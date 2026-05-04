@@ -1,22 +1,23 @@
-import type { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: 'jwt' },
+  session: { strategy: "jwt" },
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await fetch(`${baseUrl}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+        const res = await fetch(`${baseUrl}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: credentials.email,
             password: credentials.password,
@@ -31,7 +32,7 @@ export const authOptions: NextAuthOptions = {
           email: data.user.email,
           name: data.user.name,
           role: data.user.role,
-          accessToken: data.accessToken,
+          accessToken: data.access_token,
         };
       },
     }),
@@ -49,11 +50,12 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session as any).accessToken = token.accessToken;
       }
       return session;
     },
   },
   pages: {
-    signIn: '/auth/login',
+    signIn: "/login",
   },
 };

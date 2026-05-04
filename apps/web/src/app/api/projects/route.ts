@@ -1,27 +1,27 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { apiFetch } from '@/lib/server-fetch';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
-  const res = await fetch(`${baseUrl}/projects`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-  if (!res.ok) return NextResponse.json({ error: 'Failed to fetch' }, { status: res.status });
+  const res = await apiFetch('/projects');
   const data = await res.json();
-  return NextResponse.json(data);
+  return NextResponse.json(data, { status: res.status });
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${baseUrl}/projects`, {
+  const body = await request.json();
+  const res = await apiFetch('/projects', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) return NextResponse.json({ error: 'Failed to create' }, { status: res.status });
   const data = await res.json();
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(data, { status: res.status });
 }

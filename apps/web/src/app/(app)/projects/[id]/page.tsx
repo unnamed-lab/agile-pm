@@ -1,7 +1,10 @@
-import { notFound, redirect } from 'next/navigation';
-import { ProjectTabs } from '@/components/projects/ProjectTabs';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { notFound, redirect } from "next/navigation";
+import { ProjectTabs } from "@/components/projects/ProjectTabs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { apiFetch } from "@/lib/server-fetch";
+import Link from "next/link";
+import { BarChart3, ChevronRight } from "lucide-react";
 
 interface ProjectPageProps {
   params: { id: string };
@@ -9,29 +12,49 @@ interface ProjectPageProps {
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect('/auth/login');
+  if (!session) redirect("/login");
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/projects/${params.id}`, { cache: 'no-store' });
-
+  const res = await apiFetch(`/projects/${params.id}`);
   if (!res.ok) notFound();
 
   const project = await res.json();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">{project.name}</h1>
+    <>
+      {/* Page header */}
+      <header className="page-header">
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <Link
+            href="/dashboard"
+            className="text-stone-500 hover:text-stone-800 transition-colors shrink-0"
+          >
+            Dashboard
+          </Link>
+          <ChevronRight className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+          <span className="font-semibold text-stone-900 truncate">
+            {project.name}
+          </span>
           {project.description && (
-            <p className="text-gray-600 mt-1">{project.description}</p>
+            <>
+              <span className="text-stone-300 shrink-0 hidden md:block">·</span>
+              <span className="text-stone-400 text-xs truncate hidden md:block">
+                {project.description}
+              </span>
+            </>
           )}
         </div>
+        <Link
+          href={`/supervisor/${params.id}`}
+          className="btn-secondary shrink-0"
+        >
+          <BarChart3 className="w-4 h-4" />
+          Analytics
+        </Link>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="page-content">
         <ProjectTabs project={project} />
       </main>
-    </div>
+    </>
   );
 }

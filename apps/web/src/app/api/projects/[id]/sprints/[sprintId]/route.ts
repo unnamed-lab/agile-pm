@@ -1,26 +1,33 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { apiFetch } from '@/lib/server-fetch';
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-export async function PATCH(
+export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string; sprintId: string } }
+  { params }: { params: Promise<{ id: string; sprintId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-  const url = new URL(req.url);
-  const action = url.searchParams.get('action');
-  
-  const endpoint = action === 'start' 
-    ? `${API_URL}/projects/${params.id}/sprints/${params.sprintId}/start`
-    : `${API_URL}/projects/${params.id}/sprints/${params.sprintId}/complete`;
+  const { id, sprintId } = await params;
+  const res = await apiFetch(`/projects/${id}/sprints/${sprintId}`);
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
 
-  const res = await fetch(endpoint, {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; sprintId: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
+  const { id, sprintId } = await params;
+  const body = await req.json().catch(() => ({}));
+  const res = await apiFetch(`/projects/${id}/sprints/${sprintId}`, {
     method: 'PATCH',
-    headers: { Cookie: req.headers.get('cookie') || '' },
+    body: JSON.stringify(body),
   });
 
   const data = await res.json();

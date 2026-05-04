@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Plus, Play, CheckCircle2, Calendar, ChevronRight } from 'lucide-react';
 
 interface Sprint {
   id: string;
@@ -17,97 +18,156 @@ interface SprintsListProps {
   isLoading?: boolean;
 }
 
-interface SprintsListProps {
-  projectId: string;
-  sprints: Sprint[];
-  isLoading?: boolean;
-}
+const STATUS_CONFIG = {
+  PLANNING: {
+    label: 'Planning',
+    className: 'badge-stone',
+    dot: 'bg-stone-400',
+  },
+  ACTIVE: {
+    label: 'Active',
+    className: 'badge-green',
+    dot: 'bg-emerald-500',
+  },
+  COMPLETED: {
+    label: 'Completed',
+    className: 'badge-sky',
+    dot: 'bg-sky-500',
+  },
+} as const;
 
 export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps) {
   const [showForm, setShowForm] = useState(false);
 
   async function updateSprint(sprintId: string, action: 'start' | 'complete') {
-    if (!confirm(`Are you sure you want to ${action} this sprint?`)) return;
-    await fetch(`/api/projects/${projectId}/sprints/${sprintId}/${action}`, { method: 'PATCH' });
+    const label = action === 'start' ? 'start' : 'mark as complete';
+    if (!confirm(`Are you sure you want to ${label} this sprint?`)) return;
+    await fetch(`/api/projects/${projectId}/sprints/${sprintId}/${action}`, {
+      method: 'PATCH',
+    });
     window.location.reload();
   }
 
-  if (isLoading) return <div className="space-y-3">
-    {[1, 2, 3].map(i => (
-      <div key={i} className="bg-white p-4 rounded shadow-sm space-y-2 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="card p-4 space-y-2 animate-pulse">
+            <div className="h-5 skeleton w-1/3" />
+            <div className="h-4 skeleton w-1/2" />
+          </div>
+        ))}
       </div>
-    ))}
-  </div>;
+    );
+  }
 
   return (
-    <div className="mt-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Sprints ({sprints.length})</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
-        >
-          Create Sprint
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-stone-700">
+          Sprints
+          <span className="ml-1.5 text-xs font-normal text-stone-400">
+            ({sprints.length})
+          </span>
+        </h2>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+          <Plus className="w-4 h-4" />
+          New Sprint
         </button>
       </div>
 
-      {showForm && <CreateSprintForm projectId={projectId} onClose={() => setShowForm(false)} />}
+      {showForm && (
+        <CreateSprintForm projectId={projectId} onClose={() => setShowForm(false)} />
+      )}
 
       <div className="space-y-3">
-        {sprints.map(sprint => (
-          <div key={sprint.id} className="bg-white p-4 rounded shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold">{sprint.name}</h3>
-                <p className="text-sm text-gray-600">
-                  {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-600">{sprint._count?.tasks || 0} tasks</p>
+        {sprints.length === 0 && !showForm && (
+          <div className="card p-8 text-center text-stone-500 text-sm">
+            No sprints yet. Create one to get started.
+          </div>
+        )}
+        {sprints.map(sprint => {
+          const cfg = STATUS_CONFIG[sprint.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.PLANNING;
+          return (
+            <div
+              key={sprint.id}
+              className="card p-4 flex items-center justify-between gap-4 hover:border-emerald-200 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-stone-900 truncate">
+                    {sprint.name}
+                  </p>
+                  <div className="flex items-center gap-1 mt-0.5 text-xs text-stone-500">
+                    <Calendar className="w-3 h-3" />
+                    <span>
+                      {new Date(sprint.startDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                      {' – '}
+                      {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                    {sprint._count?.tasks !== undefined && (
+                      <>
+                        <ChevronRight className="w-3 h-3" />
+                        <span>{sprint._count.tasks} tasks</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex items-center gap-2 shrink-0">
                 {sprint.status === 'PLANNING' && (
                   <button
                     onClick={() => updateSprint(sprint.id, 'start')}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm"
+                    className="btn-primary py-1.5 px-3"
                   >
+                    <Play className="w-3.5 h-3.5" />
                     Start
                   </button>
                 )}
                 {sprint.status === 'ACTIVE' && (
                   <button
                     onClick={() => updateSprint(sprint.id, 'complete')}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                    className="btn-secondary py-1.5 px-3"
                   >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                     Complete
                   </button>
                 )}
-                <span className={`text-xs px-2 py-1 rounded ${
-                  sprint.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                  sprint.status === 'COMPLETED' ? 'bg-gray-100 text-gray-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {sprint.status}
-                </span>
+                <span className={cfg.className}>{cfg.label}</span>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function CreateSprintForm({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+function CreateSprintForm({
+  projectId,
+  onClose,
+}: {
+  projectId: string;
+  onClose: () => void;
+}) {
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
     await fetch(`/api/projects/${projectId}/sprints`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -118,14 +178,61 @@ function CreateSprintForm({ projectId, onClose }: { projectId: string; onClose: 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow-sm mb-4 space-y-3">
-      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Sprint name" className="w-full border rounded px-3 py-2" required />
-      <input type="text" value={goal} onChange={e => setGoal(e.target.value)} placeholder="Goal (optional)" className="w-full border rounded px-3 py-2" />
-      <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border rounded px-3 py-2" required />
-      <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="border rounded px-3 py-2" required />
-      <div className="flex gap-2">
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded text-sm">Create</button>
-        <button type="button" onClick={onClose} className="text-gray-600 text-sm">Cancel</button>
+    <form
+      onSubmit={handleSubmit}
+      className="card p-5 mb-4 space-y-4"
+    >
+      <h3 className="text-sm font-semibold text-stone-900">New Sprint</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-stone-600 mb-1">Sprint name *</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Sprint 1"
+            className="input"
+            required
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-stone-600 mb-1">Goal</label>
+          <input
+            type="text"
+            value={goal}
+            onChange={e => setGoal(e.target.value)}
+            placeholder="What do you aim to achieve?"
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Start date *</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">End date *</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading ? 'Creating…' : 'Create Sprint'}
+        </button>
+        <button type="button" onClick={onClose} className="btn-ghost">
+          Cancel
+        </button>
       </div>
     </form>
   );

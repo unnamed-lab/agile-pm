@@ -1,6 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  LayoutGrid,
+  List,
+  Zap,
+  Users,
+  GanttChartSquare,
+  Network,
+} from 'lucide-react';
 import { KanbanBoard } from './KanbanBoard';
 import { Backlog } from './Backlog';
 import { SprintsList } from './SprintsList';
@@ -40,39 +48,46 @@ interface ProjectTabsProps {
   project: Project;
 }
 
+const TABS = [
+  { id: 'board', label: 'Board', icon: LayoutGrid },
+  { id: 'backlog', label: 'Backlog', icon: List },
+  { id: 'sprints', label: 'Sprints', icon: Zap },
+  { id: 'members', label: 'Members', icon: Users },
+  { id: 'gantt', label: 'Gantt', icon: GanttChartSquare },
+  { id: 'wbs', label: 'WBS', icon: Network },
+];
+
 export function ProjectTabs({ project }: ProjectTabsProps) {
   const [activeTab, setActiveTab] = useState('board');
 
-  const tabs = [
-    { id: 'board', label: 'Board' },
-    { id: 'backlog', label: 'Backlog' },
-    { id: 'sprints', label: 'Sprints' },
-    { id: 'members', label: 'Members' },
-    { id: 'gantt', label: 'Gantt' },
-    { id: 'wbs', label: 'WBS' },
-  ];
-
   return (
     <div>
-      <div className="border-b bg-white px-4">
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Tab bar */}
+      <div className="bg-white border border-stone-200 rounded-xl mb-4 overflow-hidden">
+        <div className="flex overflow-x-auto">
+          {TABS.map(tab => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  active
+                    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
+                    : 'border-transparent text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${active ? 'text-emerald-600' : 'text-stone-400'}`} />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="mt-6">
+      {/* Tab content */}
+      <div>
         {activeTab === 'board' && (
           <KanbanBoard projectId={project.id} tasks={project.tasks} />
         )}
@@ -90,14 +105,14 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
           <MembersList projectId={project.id} members={project.members} />
         )}
         {activeTab === 'gantt' && (
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="font-semibold mb-4">Gantt Chart</h3>
+          <div className="card p-5">
+            <h3 className="text-sm font-semibold text-stone-700 mb-4">Gantt Chart</h3>
             <GanttChart sprints={project.sprints} />
           </div>
         )}
         {activeTab === 'wbs' && (
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="font-semibold mb-4">Work Breakdown Structure</h3>
+          <div className="card p-5">
+            <h3 className="text-sm font-semibold text-stone-700 mb-4">Work Breakdown Structure</h3>
             <WBSChart tasks={project.tasks} />
           </div>
         )}

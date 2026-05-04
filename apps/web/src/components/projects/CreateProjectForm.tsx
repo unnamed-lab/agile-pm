@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FolderKanban } from 'lucide-react';
 
 interface Supervisor {
   id: string;
@@ -25,7 +26,11 @@ export function CreateProjectForm({ supervisors }: { supervisors: Supervisor[] }
     const res = await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, supervisorId: supervisorId || undefined }),
+      body: JSON.stringify({
+        name,
+        description,
+        supervisorId: supervisorId || undefined,
+      }),
     });
 
     if (res.ok) {
@@ -33,59 +38,79 @@ export function CreateProjectForm({ supervisors }: { supervisors: Supervisor[] }
       router.push(`/projects/${project.id}`);
     } else {
       const data = await res.json();
-      setError(data.message || 'Failed to create project');
+      setError(data.message || 'Failed to create project. Please try again.');
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
-      {error && <div className="bg-red-50 text-red-600 p-3 rounded">{error}</div>}
+    <form onSubmit={handleSubmit} className="card p-6 sm:p-8 space-y-5">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div>
-        <label className="block text-sm font-medium mb-1">Project Name</label>
+        <label className="block text-xs font-semibold text-stone-700 mb-1.5" htmlFor="proj-name">
+          Project name *
+        </label>
         <input
+          id="proj-name"
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
-          className="w-full border rounded px-3 py-2"
+          className="input"
+          placeholder="e.g. Customer Portal v2"
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label className="block text-xs font-semibold text-stone-700 mb-1.5" htmlFor="proj-desc">
+          Description
+        </label>
         <textarea
+          id="proj-desc"
           value={description}
           onChange={e => setDescription(e.target.value)}
-          className="w-full border rounded px-3 py-2"
+          className="input resize-none"
           rows={3}
+          placeholder="Briefly describe the project goals and scope…"
         />
       </div>
 
       {supervisors.length > 0 && (
         <div>
-          <label className="block text-sm font-medium mb-1">Supervisor (Optional)</label>
+          <label className="block text-xs font-semibold text-stone-700 mb-1.5" htmlFor="proj-supervisor">
+            Supervisor <span className="font-normal text-stone-400">(optional)</span>
+          </label>
           <select
+            id="proj-supervisor"
             value={supervisorId}
             onChange={e => setSupervisorId(e.target.value)}
-            className="w-full border rounded px-3 py-2"
+            className="input"
           >
-            <option value="">No supervisor</option>
+            <option value="">No supervisor assigned</option>
             {supervisors.map(s => (
-              <option key={s.id} value={s.id}>{s.name} ({s.email})</option>
+              <option key={s.id} value={s.id}>
+                {s.name} — {s.email}
+              </option>
             ))}
           </select>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? 'Creating...' : 'Create Project'}
-      </button>
+      <div className="pt-2">
+        <button
+          type="submit"
+          disabled={loading || !name.trim()}
+          className="btn-primary w-full py-2.5"
+        >
+          <FolderKanban className="w-4 h-4" />
+          {loading ? 'Creating project…' : 'Create project'}
+        </button>
+      </div>
     </form>
   );
 }

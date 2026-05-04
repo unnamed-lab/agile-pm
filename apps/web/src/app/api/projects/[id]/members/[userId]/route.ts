@@ -1,20 +1,19 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { apiFetch } from '@/lib/server-fetch';
 import { NextRequest, NextResponse } from 'next/server';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
+  const { id } = await params;
   const body = await req.json();
-  const res = await fetch(`${API_URL}/projects/${params.id}/members`, {
+  const res = await apiFetch(`/projects/${id}/members`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Cookie: req.headers.get('cookie') || '' },
     body: JSON.stringify(body),
   });
 
@@ -24,14 +23,14 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; userId: string } }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${API_URL}/projects/${params.id}/members/${params.userId}`, {
+  const { id, userId } = await params;
+  const res = await apiFetch(`/projects/${id}/members/${userId}`, {
     method: 'DELETE',
-    headers: { Cookie: req.headers.get('cookie') || '' },
   });
 
   const data = await res.json();
