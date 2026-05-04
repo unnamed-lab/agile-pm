@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { GripVertical, User } from 'lucide-react';
 
 interface Task {
@@ -67,6 +68,7 @@ function avatarColor(name: string) {
 }
 
 export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
+  const router = useRouter();
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
@@ -78,7 +80,7 @@ export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     });
-    window.location.reload();
+    router.refresh();
   }
 
   return (

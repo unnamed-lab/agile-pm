@@ -8,7 +8,7 @@ interface Task {
   title: string;
   priority: string;
   storyPoints: number;
-  sprintId?: string | null;
+  sprintId?: string;
   assignee?: { id: string; name: string } | null;
 }
 
@@ -119,7 +119,7 @@ function CreateTaskForm({ projectId, sprints, onClose }: { projectId: string; sp
       body: JSON.stringify({ title, priority, status: 'TODO' }),
     });
     onClose();
-    window.location.reload();
+    router.refresh();
   }
 
   return (

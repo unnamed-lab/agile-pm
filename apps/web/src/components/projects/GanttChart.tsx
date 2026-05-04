@@ -16,7 +16,7 @@ interface GanttChartProps {
 }
 
 export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttChartProps) {
-  if (sprints.length === 0) return <p className="text-gray-500">No sprints to display</p>;
+  if (sprints.length === 0) return <p className="text-stone-500">No sprints to display</p>;
 
   const start = projectStartDate
     ? new Date(projectStartDate)
@@ -49,10 +49,11 @@ export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttC
             {Array.from({ length: Math.min(totalDays, 30) }, (_, i) => {
               const date = new Date(start);
               date.setDate(date.getDate() + i);
+              const isToday = new Date().toDateString() === date.toDateString();
               return (
                 <div
                   key={i}
-                  className="absolute text-xs text-gray-500"
+                  className={`absolute text-xs ${isToday ? 'text-emerald-600 font-bold' : 'text-stone-500'}`}
                   style={{ left: `${(i / totalDays) * 100}%` }}
                 >
                   {date.getDate()}/{date.getMonth() + 1}
@@ -70,21 +71,22 @@ export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttC
           const width = Math.max(2, ((sprintEnd.getTime() - sprintStart.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100);
 
           return (
-            <div key={sprint.id} className="flex items-center mb-3">
+            <div key={sprint.id} className="flex items-center mb-4 group">
               <div className="w-48 pr-4">
-                <p className="font-medium text-sm">{sprint.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="font-medium text-sm text-stone-800">{sprint.name}</p>
+                <p className="text-xs text-stone-500">
                   {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
                 </p>
               </div>
-              <div className="flex-1 relative h-10 bg-gray-100 rounded">
+              <div className="flex-1 relative h-12 bg-stone-100 rounded-lg overflow-visible">
                 <div
-                  className="absolute h-full rounded flex items-center px-2 text-xs text-white"
+                  className="absolute h-full rounded-lg flex items-center px-3 text-xs text-white font-medium shadow-sm transition-all duration-200 hover:shadow-md"
                   style={{
                     left: `${left}%`,
                     width: `${width}%`,
                     backgroundColor: sprintStatusColors[sprint.status],
                   }}
+                  title={`${sprint.name} (${sprint.status})`}
                 >
                   {sprint.status}
                 </div>
@@ -92,15 +94,14 @@ export function GanttChart({ sprints, projectStartDate, projectEndDate }: GanttC
                 {sprint.tasks?.map((task, idx) => (
                   <div
                     key={task.id}
-                    className="absolute h-3 rounded"
+                    className="absolute h-4 rounded opacity-90 hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
                     style={{
-                      left: `${left}%`,
-                      top: `${idx * 4 + 12}px`,
-                      width: `${width * 0.9}%`,
-                      backgroundColor: statusColors[task.status],
-                      opacity: 0.8,
+                      left: `${left + 1}%`,
+                      top: `${idx * 5 + 14}px`,
+                      width: `${width * 0.95}%`,
+                      backgroundColor: statusColors[task.status] || '#9CA3AF',
                     }}
-                    title={task.title}
+                    title={`${task.title} (${task.status})`}
                   />
                 ))}
               </div>
