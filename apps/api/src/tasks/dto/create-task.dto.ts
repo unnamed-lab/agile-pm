@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import { TaskStatus, Priority } from '@apms/database/generated/client';
 
 export class CreateTaskDto {
@@ -19,6 +19,7 @@ export class CreateTaskDto {
   priority?: Priority = Priority.MEDIUM;
 
   @IsOptional()
+  @IsInt()
   @Min(0)
   storyPoints?: number = 0;
 

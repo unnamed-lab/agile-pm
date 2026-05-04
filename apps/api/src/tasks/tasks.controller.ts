@@ -6,6 +6,9 @@ import { MoveTaskDto } from './dto/move-task.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { TaskStatus } from '@apms/database/generated/client';
+
+interface AuthUser { id: string; email: string; name: string; role: string }
 
 @Controller('projects/:projectId/tasks')
 @UseGuards(JwtAuthGuard, ProjectMemberGuard)
@@ -15,7 +18,7 @@ export class TasksController {
   @Post()
   create(
     @Param('projectId') projectId: string,
-    @CurrentUser() user,
+    @CurrentUser() user: AuthUser,
     @Body() dto: CreateTaskDto,
   ) {
     return this.tasksService.create(projectId, user.id, dto);
@@ -27,7 +30,14 @@ export class TasksController {
     @Query('status') status?: string,
     @Query('sprintId') sprintId?: string,
   ) {
-    return this.tasksService.findAll(projectId, { status, sprintId });
+    const filters: { status?: TaskStatus; sprintId?: string } = {};
+    if (status && Object.values(TaskStatus).includes(status as TaskStatus)) {
+      filters.status = status as TaskStatus;
+    }
+    if (sprintId !== undefined) {
+      filters.sprintId = sprintId;
+    }
+    return this.tasksService.findAll(projectId, filters);
   }
 
   @Get('sprint/:sprintId')
@@ -36,30 +46,39 @@ export class TasksController {
   }
 
   @Get(':taskId')
-  findOne(@Param('taskId') taskId: string) {
-    return this.tasksService.findOne(taskId);
+  findOne(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+  ) {
+    return this.tasksService.findOne(projectId, taskId);
   }
 
   @Patch(':taskId')
   update(
+    @Param('projectId') projectId: string,
     @Param('taskId') taskId: string,
-    @CurrentUser() user,
+    @CurrentUser() user: AuthUser,
     @Body() dto: UpdateTaskDto,
   ) {
-    return this.tasksService.update(taskId, user.id, dto);
+    return this.tasksService.update(projectId, taskId, user.id, dto);
   }
 
   @Patch(':taskId/move')
   moveTask(
+    @Param('projectId') projectId: string,
     @Param('taskId') taskId: string,
-    @CurrentUser() user,
+    @CurrentUser() user: AuthUser,
     @Body() dto: MoveTaskDto,
   ) {
-    return this.tasksService.moveTask(taskId, user.id, dto);
+    return this.tasksService.moveTask(projectId, taskId, user.id, dto);
   }
 
   @Delete(':taskId')
-  remove(@Param('taskId') taskId: string, @CurrentUser() user) {
-    return this.tasksService.remove(taskId, user.id);
+  remove(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.tasksService.remove(projectId, taskId, user.id);
   }
 }

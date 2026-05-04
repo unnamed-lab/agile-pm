@@ -29,8 +29,11 @@ export class SprintsController {
   }
 
   @Get(':sprintId')
-  findOne(@Param('sprintId') sprintId: string) {
-    return this.sprintsService.findOne(sprintId);
+  findOne(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+  ) {
+    return this.sprintsService.findOne(projectId, sprintId);
   }
 
   @Patch(':sprintId/start')
@@ -56,7 +59,10 @@ export class SprintsController {
   }
 
   @Get(':sprintId/burndown')
-  getBurndown(@Param('sprintId') sprintId: string) {
-    return this.sprintsService.getBurndownData(sprintId);
+  getBurndown(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+  ) {
+    return this.sprintsService.getBurndownData(projectId, sprintId);
   }
 }

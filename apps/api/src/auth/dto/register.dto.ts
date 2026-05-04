@@ -1,8 +1,9 @@
-import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 import { SystemRole } from '@apms/database/generated/client';
 
 export class RegisterDto {
   @IsString()
+  @MaxLength(100)
   name: string;
 
   @IsEmail()
@@ -12,6 +13,6 @@ export class RegisterDto {
   @MinLength(8)
   password: string;
 
-  @IsEnum(SystemRole)
-  role: SystemRole = SystemRole.STUDENT;
+  // Role is always STUDENT on self-registration; admin/supervisor roles are assigned by admins
+  readonly role: SystemRole = SystemRole.STUDENT;
 }

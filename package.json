@@ -6,6 +6,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
+    "postinstall": "pnpm db:generate",
     "db:migrate": "pnpm --filter database migrate:dev",
     "db:generate": "pnpm --filter database generate",
     "db:studio": "pnpm --filter database studio",

@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 import { TaskStatus } from '@apms/database/generated/client';
 
 export class MoveTaskDto {
@@ -6,6 +6,7 @@ export class MoveTaskDto {
   @IsEnum(TaskStatus)
   status?: TaskStatus;
 
+  @ValidateIf(o => o.sprintId !== null)
   @IsOptional()
   @IsUUID()
   sprintId?: string | null;
