@@ -118,7 +118,7 @@ function CreateTaskForm({ projectId, sprints, onClose }: { projectId: string; sp
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, priority, status: 'TODO' }),
     });
-    onClose();
+    setTitle('');
     router.refresh();
   }
 
