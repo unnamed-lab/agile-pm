@@ -1,5 +1,18 @@
 'use client';
 
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  Legend,
+} from 'recharts';
+import { Activity, AlertTriangle, CheckCircle2 } from 'lucide-react';
+
 interface ControlDataPoint {
   sprint: string;
   actual: number;
@@ -11,82 +24,149 @@ interface ControlChartProps {
   data: ControlDataPoint[];
 }
 
-export function ControlChart({ data }: ControlChartProps) {
-  if (data.length === 0) return <p className="text-gray-500">No data available</p>;
+export function ControlChart({ data = [] }: ControlChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="text-center py-10 text-slate-500 bg-slate-50 border border-slate-200 rounded-xl">
+        <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+        No sprint data available for process control chart.
+      </div>
+    );
+  }
 
   const points = data.map(d => d.actual);
-  const mean = points.reduce((a, b) => a + b, 0) / points.length;
+  const mean = points.reduce((a, b) => a + b, 0) / (points.length || 1);
 
-  // Calculate moving ranges
-  const ranges = [];
+  // Moving ranges for 3-sigma control limits calculation
+  const ranges: number[] = [];
   for (let i = 1; i < points.length; i++) {
     ranges.push(Math.abs(points[i] - points[i - 1]));
   }
-  const avgRange = ranges.length > 0 ? ranges.reduce((a, b) => a + b, 0) / ranges.length : 0;
+  const avgRange = ranges.length > 0 ? ranges.reduce((a, b) => a + b, 0) / ranges.length : 1;
 
-  // Control limits (approximate using Western Electric rules)
-  const ucl = mean + 2.66 * avgRange; // Upper Control Limit
-  const lcl = Math.max(0, mean - 2.66 * avgRange); // Lower Control Limit
+  const ucl = Math.round((mean + 2.66 * avgRange) * 10) / 10;
+  const lcl = Math.max(0, Math.round((mean - 2.66 * avgRange) * 10) / 10);
 
-  const width = 800;
-  const height = 300;
-  const padding = 60;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-  const maxVal = Math.max(ucl, ...points) * 1.1;
-  const minVal = Math.min(lcl, ...points) * 0.9;
-
-  const getX = (i: number) => padding + (i / (data.length - 1)) * chartWidth;
-  const getY = (val: number) => padding + ((maxVal - val) / (maxVal - minVal)) * chartHeight;
+  const outOfControlPoints = data.filter(d => d.actual > ucl || d.actual < lcl);
+  const isStable = outOfControlPoints.length === 0;
 
   return (
-    <div className="bg-white p-4 rounded-lg">
-      <h4 className="font-semibold mb-4">Control Chart (Process Stability)</h4>
-      <p className="text-xs text-gray-600 mb-2">
-        Mean: {mean.toFixed(1)} | UCL: {ucl.toFixed(1)} | LCL: {lcl.toFixed(1)}
-      </p>
-      <svg width={width} height={height} className="border rounded">
-        {/* UCL line */}
-        <line x1={padding} y1={getY(ucl)} x2={width - padding} y2={getY(ucl)} stroke="#EF4444" strokeWidth="1" strokeDasharray="5,5" />
-        <text x={width - padding + 5} y={getY(ucl) + 5} fontSize="10" fill="#EF4444">UCL</text>
+    <div className="space-y-4">
+      {/* Metrics & Stability Status Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold ${
+              isStable ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+            }`}
+          >
+            {isStable ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-800">Process Stability Indicator</h4>
+            <p className={`text-xs font-extrabold ${isStable ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {isStable ? 'Process In Statistical Control' : `${outOfControlPoints.length} Sprint Anomalies Detected`}
+            </p>
+          </div>
+        </div>
 
-        {/* Mean line */}
-        <line x1={padding} y1={getY(mean)} x2={width - padding} y2={getY(mean)} stroke="#3B82F6" strokeWidth="1" strokeDasharray="5,5" />
-        <text x={width - padding + 5} y={getY(mean) + 5} fontSize="10" fill="#3B82F6">Mean</text>
+        {/* Statistical Control Bounds */}
+        <div className="flex items-center gap-4 text-xs font-bold text-slate-600">
+          <span className="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-md border border-rose-200">
+            UCL: {ucl}
+          </span>
+          <span className="bg-sky-50 text-sky-700 px-2.5 py-1 rounded-md border border-sky-200">
+            Mean: {mean.toFixed(1)}
+          </span>
+          <span className="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-md border border-rose-200">
+            LCL: {lcl}
+          </span>
+        </div>
+      </div>
 
-        {/* LCL line */}
-        <line x1={padding} y1={getY(lcl)} x2={width - padding} y2={getY(lcl)} stroke="#EF4444" strokeWidth="1" strokeDasharray="5,5" />
-        <text x={width - padding + 5} y={getY(lcl) + 5} fontSize="10" fill="#EF4444">LCL</text>
-
-        {/* Actual line */}
-        <polyline
-          points={data.map((d, i) => `${getX(i)},${getY(d.actual)}`).join(' ')}
-          fill="none"
-          stroke="#10B981"
-          strokeWidth="2"
-        />
-
-        {/* Data points */}
-        {data.map((d, i) => {
-          const isOutOfControl = d.actual > ucl || d.actual < lcl;
-          return (
-            <circle
-              key={i}
-              cx={getX(i)}
-              cy={getY(d.actual)}
-              r="4"
-              fill={isOutOfControl ? '#EF4444' : '#10B981'}
+      {/* Recharts LineChart */}
+      <div className="h-72 w-full pt-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="sprint" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} />
+            <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const val = Number(payload[0]?.value || 0);
+                  const isAnomaly = val > ucl || val < lcl;
+                  return (
+                    <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl text-xs space-y-1">
+                      <p className="font-bold text-slate-300">{label}</p>
+                      <p className="text-[#00c875] font-extrabold">
+                        Velocity Completed: {val} tasks
+                      </p>
+                      {isAnomaly && (
+                        <p className="text-rose-400 font-bold flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" /> Out of Control Limit
+                        </p>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              }}
             />
-          );
-        })}
+            <Legend
+              wrapperStyle={{ paddingTop: 10, fontSize: 12, fontWeight: 600 }}
+              formatter={(value) => <span className="text-slate-700">{value}</span>}
+            />
 
-        {/* X-axis labels */}
-        {data.map((d, i) => (
-          <text key={i} x={getX(i)} y={height - padding + 20} fontSize="10" fill="#6B7280" textAnchor="middle">
-            {d.sprint.length > 8 ? d.sprint.substring(0, 8) : d.sprint}
-          </text>
-        ))}
-      </svg>
+            {/* Reference Limits */}
+            <ReferenceLine
+              y={ucl}
+              label={{ value: 'UCL', fill: '#ef4444', fontSize: 10, fontWeight: 800, position: 'right' }}
+              stroke="#ef4444"
+              strokeDasharray="5 5"
+              strokeWidth={1.5}
+            />
+            <ReferenceLine
+              y={mean}
+              label={{ value: 'Mean', fill: '#0284c7', fontSize: 10, fontWeight: 800, position: 'right' }}
+              stroke="#0284c7"
+              strokeDasharray="4 4"
+              strokeWidth={1.5}
+            />
+            <ReferenceLine
+              y={lcl}
+              label={{ value: 'LCL', fill: '#ef4444', fontSize: 10, fontWeight: 800, position: 'right' }}
+              stroke="#ef4444"
+              strokeDasharray="5 5"
+              strokeWidth={1.5}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="actual"
+              name="Completed Velocity"
+              stroke="#00c875"
+              strokeWidth={3}
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                const isAnomaly = payload.actual > ucl || payload.actual < lcl;
+                return (
+                  <circle
+                    key={props.index}
+                    cx={cx}
+                    cy={cy}
+                    r={isAnomaly ? 6 : 4}
+                    fill={isAnomaly ? '#ef4444' : '#00c875'}
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                  />
+                );
+              }}
+              activeDot={{ r: 7 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Play, CheckCircle2, Calendar, ChevronRight } from 'lucide-react';
+import { Plus, Play, CheckCircle2, Calendar, ChevronRight, Zap, Target } from 'lucide-react';
+
+interface Task {
+  id: string;
+  status: string;
+  storyPoints?: number;
+}
 
 interface Sprint {
   id: string;
@@ -10,6 +16,8 @@ interface Sprint {
   startDate: string | Date;
   endDate: string | Date;
   color?: string;
+  goal?: string;
+  tasks?: Task[];
   _count?: { tasks: number };
 }
 
@@ -19,33 +27,39 @@ interface SprintsListProps {
   isLoading?: boolean;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; text: string; dot: string }
+> = {
   PLANNING: {
     label: 'Planning',
-    className: 'badge-stone',
-    dot: 'bg-stone-400',
+    bg: 'bg-[#fdab3d]',
+    text: 'text-white',
+    dot: '#fdab3d',
   },
   ACTIVE: {
-    label: 'Active',
-    className: 'badge-green',
-    dot: 'bg-emerald-500',
+    label: 'Active Sprint',
+    bg: 'bg-[#00c875]',
+    text: 'text-white',
+    dot: '#00c875',
   },
   COMPLETED: {
     label: 'Completed',
-    className: 'badge-sky',
-    dot: 'bg-sky-500',
+    bg: 'bg-[#94a3b8]',
+    text: 'text-white',
+    dot: '#94a3b8',
   },
-} as const;
+};
 
 const COLOR_OPTIONS = [
-  '#10B981', // emerald
-  '#3B82F6', // blue
-  '#8B5CF6', // violet
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#EC4899', // pink
-  '#14B8A6', // teal
-  '#F97316', // orange
+  '#00c875',
+  '#0073ea',
+  '#fdab3d',
+  '#a25ddc',
+  '#e2445c',
+  '#00d2d2',
+  '#ff642f',
+  '#579bfc',
 ];
 
 export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps) {
@@ -62,9 +76,9 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="card p-4 space-y-2 animate-pulse">
+          <div key={i} className="card p-5 space-y-3 animate-pulse">
             <div className="h-5 skeleton w-1/3" />
             <div className="h-4 skeleton w-1/2" />
           </div>
@@ -74,14 +88,24 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-stone-700">
-          Sprints
-          <span className="ml-1.5 text-xs font-normal text-stone-400">
-            ({sprints.length})
-          </span>
-        </h2>
+    <div className="space-y-5">
+      {/* Header bar */}
+      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-800">
+              Sprint Management
+              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                {sprints.length}
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500">Manage sprint cycles, goals, and commitments</p>
+          </div>
+        </div>
+
         <button onClick={() => setShowForm(!showForm)} className="btn-primary">
           <Plus className="w-4 h-4" />
           New Sprint
@@ -92,116 +116,121 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
         <CreateSprintForm projectId={projectId} onClose={() => setShowForm(false)} />
       )}
 
-      <div className="space-y-3">
+      {/* Sprints Cards */}
+      <div className="space-y-4">
         {sprints.length === 0 && !showForm && (
-          <div className="card p-8 text-center text-stone-500 text-sm">
-            No sprints yet. Create one to get started.
+          <div className="card p-10 text-center text-slate-500 text-sm">
+            <Zap className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            No sprints created yet. Click <strong>New Sprint</strong> to plan your first iteration.
           </div>
         )}
+
         {sprints.map(sprint => {
-          const cfg = STATUS_CONFIG[sprint.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.PLANNING;
+          const cfg = STATUS_CONFIG[sprint.status] || STATUS_CONFIG.PLANNING;
+          const taskList = sprint.tasks || [];
+          const totalTasks = sprint._count?.tasks ?? taskList.length;
+          const doneTasks = taskList.filter(t => t.status === 'DONE').length;
+          const totalPoints = taskList.reduce((acc, t) => acc + (t.storyPoints || 0), 0);
+          const progressPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
           return (
             <div
               key={sprint.id}
-              className="card p-4 flex items-center justify-between gap-4 hover:border-emerald-200 transition-colors"
+              className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200 space-y-4 relative overflow-hidden"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: sprint.color || cfg.dot }}
-                />
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-stone-900 truncate">
-                    {sprint.name}
-                  </p>
-                  <div className="flex items-center gap-1 mt-0.5 text-xs text-stone-500">
-                    <Calendar className="w-3 h-3" />
-                    <span>
-                      {new Date(sprint.startDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                      {' – '}
-                      {new Date(sprint.endDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+              {/* Left Accent Color Bar */}
+              <div
+                className="absolute left-0 top-0 bottom-0 w-1.5"
+                style={{ backgroundColor: sprint.color || cfg.dot }}
+              />
+
+              <div className="flex flex-wrap items-start justify-between gap-4 pl-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                      style={{ backgroundColor: sprint.color || cfg.dot }}
+                    />
+                    <h3 className="text-base font-bold text-slate-800">{sprint.name}</h3>
+                    <span
+                      className={`px-3 py-1 rounded-md text-xs font-bold shadow-sm ${cfg.bg} ${cfg.text}`}
+                    >
+                      {cfg.label}
                     </span>
-                    {sprint._count?.tasks !== undefined && (
+                  </div>
+
+                  {sprint.goal && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1">
+                      <Target className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>{sprint.goal}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-2">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>
+                        {new Date(sprint.startDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                        {' – '}
+                        {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <span>•</span>
+                    <span className="font-semibold text-slate-700">{totalTasks} tasks</span>
+                    {totalPoints > 0 && (
                       <>
-                        <ChevronRight className="w-3 h-3" />
-                        <span>{sprint._count.tasks} tasks</span>
+                        <span>•</span>
+                        <span className="font-semibold text-emerald-700">{totalPoints} story points</span>
                       </>
                     )}
                   </div>
                 </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {sprint.status === 'PLANNING' && (
+                    <button
+                      onClick={() => updateSprint(sprint.id, 'start')}
+                      className="bg-[#00c875] text-white hover:bg-emerald-600 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Start Sprint
+                    </button>
+                  )}
+                  {sprint.status === 'ACTIVE' && (
+                    <button
+                      onClick={() => updateSprint(sprint.id, 'complete')}
+                      className="bg-slate-800 text-white hover:bg-slate-900 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Complete Sprint
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {sprint.status === 'PLANNING' && (
-                  <button
-                    onClick={() => updateSprint(sprint.id, 'start')}
-                    className="btn-primary py-1.5 px-3"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    Start
-                  </button>
-                )}
-                {sprint.status === 'ACTIVE' && (
-                  <button
-                    onClick={() => updateSprint(sprint.id, 'complete')}
-                    className="btn-secondary py-1.5 px-3"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Complete
-                  </button>
-                )}
-                <span className={cfg.className}>{cfg.label}</span>
-              </div>
-            </div>
-          );
-        })}
-                      {' – '}
-                      {new Date(sprint.endDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                    {sprint._count?.tasks !== undefined && (
-                      <>
-                        <ChevronRight className="w-3 h-3" />
-                        <span>{sprint._count.tasks} tasks</span>
-                      </>
-                    )}
+              {/* Progress bar line */}
+              {totalTasks > 0 && (
+                <div className="pl-2 space-y-1.5 pt-2 border-t border-slate-100">
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
+                    <span>Sprint Completion Rate</span>
+                    <span className="text-emerald-600 font-bold">{progressPercent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
+                    <div
+                      className="bg-[#00c875] h-full transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
                 </div>
-              </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {sprint.status === 'PLANNING' && (
-                  <button
-                    onClick={() => updateSprint(sprint.id, 'start')}
-                    className="btn-primary py-1.5 px-3"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    Start
-                  </button>
-                )}
-                {sprint.status === 'ACTIVE' && (
-                  <button
-                    onClick={() => updateSprint(sprint.id, 'complete')}
-                    className="btn-secondary py-1.5 px-3"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Complete
-                  </button>
-                )}
-                <span className={cfg.className}>{cfg.label}</span>
-              </div>
+              )}
             </div>
           );
         })}
@@ -221,7 +250,7 @@ function CreateSprintForm({
   const [goal, setGoal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [color, setColor] = useState('#10B981');
+  const [color, setColor] = useState('#00c875');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -239,33 +268,33 @@ function CreateSprintForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="card p-5 mb-4 space-y-4"
+      className="bg-white border border-slate-200 rounded-xl p-5 shadow-md space-y-4"
     >
-      <h3 className="text-sm font-semibold text-stone-900">New Sprint</h3>
+      <h3 className="text-sm font-bold text-slate-900">Create New Sprint Iteration</h3>
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="block text-xs font-medium text-stone-600 mb-1">Sprint name *</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Name *</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. Sprint 1"
+            placeholder="e.g. Sprint 3 — Core Auth & Dashboard"
             className="input"
             required
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium text-stone-600 mb-1">Goal</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Goal</label>
           <input
             type="text"
             value={goal}
             onChange={e => setGoal(e.target.value)}
-            placeholder="What do you aim to achieve?"
+            placeholder="What primary goal should be achieved in this sprint?"
             className="input"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Start date *</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date *</label>
           <input
             type="date"
             value={startDate}
@@ -275,7 +304,7 @@ function CreateSprintForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">End date *</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">End Date *</label>
           <input
             type="date"
             value={endDate}
@@ -285,34 +314,27 @@ function CreateSprintForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium text-stone-600 mb-1">Sprint color</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Theme Accent Color</label>
           <div className="flex items-center gap-2">
             {COLOR_OPTIONS.map(c => (
               <button
                 type="button"
                 key={c}
                 onClick={() => setColor(c)}
-                className={`w-8 h-8 rounded-lg border-2 transition-all ${
-                  color === c ? 'border-stone-900 scale-110' : 'border-transparent hover:border-stone-300'
+                className={`w-7 h-7 rounded-lg border-2 transition-all ${
+                  color === c ? 'border-slate-900 scale-110 shadow-sm' : 'border-transparent hover:border-slate-300'
                 }`}
                 style={{ backgroundColor: c }}
-                title={c}
               />
             ))}
-            <input
-              type="color"
-              value={color}
-              onChange={e => setColor(e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer"
-            />
           </div>
         </div>
       </div>
-      <div className="flex gap-2 pt-1">
-        <button type="submit" disabled={loading} className="btn-primary">
-          {loading ? 'Creating…' : 'Create Sprint'}
+      <div className="flex gap-2 pt-2">
+        <button type="submit" disabled={loading} className="btn-primary font-bold text-xs">
+          {loading ? 'Creating...' : 'Create Sprint'}
         </button>
-        <button type="button" onClick={onClose} className="btn-ghost">
+        <button type="button" onClick={onClose} className="btn-ghost text-xs">
           Cancel
         </button>
       </div>

@@ -85,6 +85,31 @@
   .badge-teal   { @apply badge bg-teal-50 text-teal-700 ring-1 ring-teal-200/50; }
   .badge-sky    { @apply badge bg-sky-50 text-sky-700 ring-1 ring-sky-200/50; }
 
+  /* Monday.com Vibrant Full-Cell Badges & Status Pills */
+  .monday-status-done {
+    @apply bg-[#00c875] text-white font-semibold shadow-sm hover:brightness-105 transition-all text-xs rounded-md px-3 py-1.5 inline-flex items-center justify-center gap-1.5;
+  }
+  .monday-status-working {
+    @apply bg-[#fdab3d] text-white font-semibold shadow-sm hover:brightness-105 transition-all text-xs rounded-md px-3 py-1.5 inline-flex items-center justify-center gap-1.5;
+  }
+  .monday-status-review {
+    @apply bg-[#a25ddc] text-white font-semibold shadow-sm hover:brightness-105 transition-all text-xs rounded-md px-3 py-1.5 inline-flex items-center justify-center gap-1.5;
+  }
+  .monday-status-stuck {
+    @apply bg-[#e2445c] text-white font-semibold shadow-sm hover:brightness-105 transition-all text-xs rounded-md px-3 py-1.5 inline-flex items-center justify-center gap-1.5;
+  }
+  .monday-status-todo {
+    @apply bg-[#c4c4c4] text-white font-semibold shadow-sm hover:brightness-105 transition-all text-xs rounded-md px-3 py-1.5 inline-flex items-center justify-center gap-1.5;
+  }
+
+  /* Monday Table Styling */
+  .monday-table-row {
+    @apply hover:bg-slate-50/80 border-b border-slate-100 transition-colors duration-150;
+  }
+  .monday-table-header {
+    @apply text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/90 py-2.5 px-3 border-b border-slate-200;
+  }
+
   /* Page layout */
   .page-header {
     @apply bg-white/80 backdrop-blur-sm border-b border-stone-200
@@ -102,6 +127,15 @@
 
 /* ─── Utility layer ──────────────────────────────────── */
 @layer utilities {
+
+  /* Pulse animation for critical path nodes */
+  @keyframes criticalPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  }
+  .animate-critical-pulse {
+    animation: criticalPulse 2s infinite ease-in-out;
+  }
 
   /* Skeleton shimmer */
   .skeleton {
