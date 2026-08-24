@@ -15,7 +15,6 @@ export class TasksService {
     private notifications: NotificationsService,
   ) {}
 
-
   async create(projectId: string, userId: string, dto: CreateTaskDto) {
     if (dto.sprintId) {
       const sprint = await this.prisma.sprint.findFirst({
@@ -41,6 +40,8 @@ export class TasksService {
         status: dto.status || 'TODO',
         priority: dto.priority || 'MEDIUM',
         storyPoints: dto.storyPoints || 0,
+        startDate: dto.startDate ? new Date(dto.startDate) : null,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         position: (maxPosition?.position || 0) + 1000,
       },
       include: this.taskIncludes(),
@@ -117,6 +118,8 @@ export class TasksService {
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.priority !== undefined && { priority: dto.priority }),
         ...(dto.storyPoints !== undefined && { storyPoints: dto.storyPoints }),
+        ...(dto.startDate !== undefined && { startDate: dto.startDate ? new Date(dto.startDate) : null }),
+        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
         ...(dto.assigneeId !== undefined && { assigneeId: dto.assigneeId }),
         ...(dto.sprintId !== undefined && { sprintId: dto.sprintId }),
       },

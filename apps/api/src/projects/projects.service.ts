@@ -180,6 +180,100 @@ export class ProjectsService {
     };
   }
 
+  async getUserDashboardSummary(userId: string) {
+    const userProjects = await this.prisma.project.findMany({
+      where: {
+        deletedAt: null,
+        members: { some: { userId } },
+      },
+      select: { id: true, name: true },
+    });
+
+    const projectIds = userProjects.map((p) => p.id);
+
+    if (projectIds.length === 0) {
+      return {
+        activeProjectsCount: 0,
+        totalTasksCount: 0,
+        completedTasksCount: 0,
+        inProgressTasksCount: 0,
+        overallProgressPercent: 0,
+        totalSprintsCount: 0,
+        totalMembersCount: 0,
+        myAssignedTasks: [],
+        allTasks: [],
+      };
+    }
+
+    const [totalTasksCount, completedTasksCount, inProgressTasksCount, totalSprintsCount, allTasks, myAssignedTasks] =
+      await Promise.all([
+        this.prisma.task.count({ where: { projectId: { in: projectIds }, deletedAt: null } }),
+        this.prisma.task.count({ where: { projectId: { in: projectIds }, status: 'DONE', deletedAt: null } }),
+        this.prisma.task.count({
+          where: { projectId: { in: projectIds }, status: { in: ['IN_PROGRESS', 'IN_REVIEW'] }, deletedAt: null },
+        }),
+        this.prisma.sprint.count({ where: { projectId: { in: projectIds } } }),
+        this.prisma.task.findMany({
+          where: { projectId: { in: projectIds }, deletedAt: null },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true,
+            storyPoints: true,
+            projectId: true,
+            assigneeId: true,
+            project: { select: { name: true } },
+            assignee: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        }),
+        this.prisma.task.findMany({
+          where: { projectId: { in: projectIds }, assigneeId: userId, deletedAt: null },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true,
+            storyPoints: true,
+            projectId: true,
+            assigneeId: true,
+            project: { select: { name: true } },
+            assignee: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        }),
+      ]);
+
+    const members = await this.prisma.projectMember.groupBy({
+      by: ['userId'],
+      where: { projectId: { in: projectIds } },
+    });
+
+    const overallProgressPercent =
+      totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+    return {
+      activeProjectsCount: userProjects.length,
+      totalTasksCount,
+      completedTasksCount,
+      inProgressTasksCount,
+      overallProgressPercent,
+      totalSprintsCount,
+      totalMembersCount: members.length,
+      myAssignedTasks: myAssignedTasks.map((t) => ({
+        ...t,
+        projectName: t.project?.name,
+      })),
+      allTasks: allTasks.map((t) => ({
+        ...t,
+        projectName: t.project?.name,
+      })),
+    };
+  }
+
   private projectIncludes() {
     return {
       members: {

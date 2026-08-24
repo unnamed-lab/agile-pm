@@ -15,6 +15,11 @@ async function hash(password: string) {
 async function main() {
   console.log('🌱 Seeding rich projects & chart data into database...');
 
+  // Clear existing tasks, activity logs, and notifications to prevent duplicates
+  await prisma.activityLog.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.task.deleteMany({});
+
   // ── 1. USERS ─────────────────────────────────────────────────────────────
   const [admin, supervisor1, supervisor2, sm1, dev1, dev2, dev3, student1] =
     await Promise.all([
@@ -301,7 +306,7 @@ async function main() {
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       storyPoints: number;
       assigneeId: string;
-      updatedAtOffsetDays?: number; // Days ago when task status was updated
+      updatedAtOffsetDays?: number;
     },
     creatorId: string,
   ) {
@@ -463,17 +468,6 @@ async function main() {
   console.log(`✓ Seeded notifications`);
 
   console.log('\n✅ Seed complete! All projects and chart data are ready.\n');
-  console.log('─────────────────────────────────────────');
-  console.log('Test accounts (all passwords follow pattern):');
-  console.log('  admin@agilepm.dev        Admin@1234      (ADMIN)');
-  console.log('  dr.ada@agilepm.dev       Supervisor@1234 (SUPERVISOR)');
-  console.log('  prof.james@agilepm.dev   Supervisor@1234 (SUPERVISOR)');
-  console.log('  tunde@agilepm.dev        Student@1234    (STUDENT / Scrum Master)');
-  console.log('  ngozi@agilepm.dev        Student@1234    (STUDENT / Developer)');
-  console.log('  emeka@agilepm.dev        Student@1234    (STUDENT / Developer)');
-  console.log('  amara@agilepm.dev        Student@1234    (STUDENT / Developer)');
-  console.log('  chisom@agilepm.dev       Student@1234    (STUDENT / Developer)');
-  console.log('─────────────────────────────────────────');
 }
 
 main()

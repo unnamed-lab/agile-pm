@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, IsDateString } from 'class-validator';
 import { TaskStatus, Priority } from '@apms/database/generated/client';
 
 export class UpdateTaskDto {
@@ -23,6 +23,14 @@ export class UpdateTaskDto {
   @IsInt()
   @Min(0)
   storyPoints?: number;
+
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
 
   @IsOptional()
   @IsString()

@@ -23,6 +23,11 @@ export class ProjectsController {
     return this.projectsService.findAllForUser(user.id);
   }
 
+  @Get('dashboard-summary')
+  getDashboardSummary(@CurrentUser() user) {
+    return this.projectsService.getUserDashboardSummary(user.id);
+  }
+
   @Get(':id')
   @UseGuards(ProjectMemberGuard)
   findOne(@Param('id') id: string) {

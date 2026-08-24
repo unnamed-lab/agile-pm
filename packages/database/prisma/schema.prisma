@@ -122,6 +122,8 @@ model Task {
   status      TaskStatus @default(TODO)
   priority    Priority   @default(MEDIUM)
   storyPoints Int?
+  startDate   DateTime?
+  dueDate     DateTime?
   assigneeId  String?
   creatorId   String
   position    Int        @default(0)
