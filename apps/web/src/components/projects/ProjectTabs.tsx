@@ -15,6 +15,7 @@ import { SprintsList } from './SprintsList';
 import { MembersList } from './MembersList';
 import { GanttChart } from './GanttChart';
 import { WBSChart } from './WBSChart';
+import { useProject } from '@/hooks/useProjects';
 
 interface Project {
   id: string;
@@ -31,6 +32,8 @@ interface Project {
     status: string;
     startDate: string;
     endDate: string;
+    color?: string;
+    goal?: string;
     tasks?: Array<{ id: string; title: string; status: string; storyPoints: number }>;
   }>;
   tasks: Array<{
@@ -57,13 +60,14 @@ const TABS = [
   { id: 'wbs', label: 'WBS', icon: Network },
 ];
 
-export function ProjectTabs({ project }: ProjectTabsProps) {
+export function ProjectTabs({ project: initialProject }: ProjectTabsProps) {
   const [activeTab, setActiveTab] = useState('board');
+  const { data: project = initialProject } = useProject(initialProject.id, initialProject);
 
   return (
     <div>
       {/* Tab bar */}
-      <div className="bg-white border border-stone-200 rounded-xl mb-4 overflow-hidden">
+      <div className="bg-white border border-stone-200 rounded-xl mb-4 overflow-hidden shadow-sm">
         <div className="flex overflow-x-auto">
           {TABS.map(tab => {
             const Icon = tab.icon;
@@ -89,31 +93,32 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
       {/* Tab content */}
       <div>
         {activeTab === 'board' && (
-          <KanbanBoard projectId={project.id} tasks={project.tasks} />
+          <KanbanBoard projectId={project.id} tasks={project.tasks || []} />
         )}
         {activeTab === 'backlog' && (
           <Backlog
             projectId={project.id}
-            tasks={project.tasks}
-            sprints={project.sprints}
+            tasks={project.tasks || []}
+            sprints={project.sprints || []}
+            members={project.members || []}
           />
         )}
         {activeTab === 'sprints' && (
-          <SprintsList projectId={project.id} sprints={project.sprints} />
+          <SprintsList projectId={project.id} sprints={project.sprints || []} />
         )}
         {activeTab === 'members' && (
-          <MembersList projectId={project.id} members={project.members} />
+          <MembersList projectId={project.id} members={project.members || []} />
         )}
         {activeTab === 'gantt' && (
           <div className="card p-5">
             <h3 className="text-sm font-semibold text-stone-700 mb-4">Gantt Chart</h3>
-            <GanttChart sprints={project.sprints} />
+            <GanttChart sprints={project.sprints || []} />
           </div>
         )}
         {activeTab === 'wbs' && (
           <div className="card p-5">
             <h3 className="text-sm font-semibold text-stone-700 mb-4">Work Breakdown Structure</h3>
-            <WBSChart tasks={project.tasks} />
+            <WBSChart tasks={project.tasks || []} />
           </div>
         )}
       </div>

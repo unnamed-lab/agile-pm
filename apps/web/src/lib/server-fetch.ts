@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api/v1';
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const session = await getServerSession(authOptions);

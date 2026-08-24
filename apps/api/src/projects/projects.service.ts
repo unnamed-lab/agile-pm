@@ -51,7 +51,23 @@ export class ProjectsService {
       where: { id: projectId, deletedAt: null },
       include: {
         ...this.projectIncludes(),
-        sprints: { orderBy: { createdAt: 'desc' } },
+        sprints: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            _count: { select: { tasks: true } },
+            tasks: {
+              where: { deletedAt: null },
+              select: { id: true, title: true, status: true, priority: true, storyPoints: true, assignee: { select: { id: true, name: true, avatarUrl: true } } },
+            },
+          },
+        },
+        tasks: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            assignee: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        },
       },
     });
     if (!project) throw new NotFoundException('Project not found');

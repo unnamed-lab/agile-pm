@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Play, CheckCircle2, Calendar, ChevronRight, Zap, Target } from 'lucide-react';
+import { Plus, Play, CheckCircle2, Calendar, Zap, Target, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { useCreateSprint, useUpdateSprint, useEditSprintDetails, useDeleteSprint } from '@/hooks/useProjects';
 
 interface Task {
   id: string;
@@ -62,16 +63,37 @@ const COLOR_OPTIONS = [
   '#579bfc',
 ];
 
-export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps) {
+export function SprintsList({ projectId, sprints = [], isLoading }: SprintsListProps) {
   const [showForm, setShowForm] = useState(false);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function updateSprint(sprintId: string, action: 'start' | 'complete') {
+  const updateSprintMutation = useUpdateSprint(projectId);
+  const deleteSprintMutation = useDeleteSprint(projectId);
+
+  async function handleUpdateSprint(sprintId: string, action: 'start' | 'complete') {
     const label = action === 'start' ? 'start' : 'mark as complete';
     if (!confirm(`Are you sure you want to ${label} this sprint?`)) return;
-    await fetch(`/api/projects/${projectId}/sprints/${sprintId}/${action}`, {
-      method: 'PATCH',
-    });
-    window.location.reload();
+
+    setErrorMsg(null);
+    try {
+      await updateSprintMutation.mutateAsync({ sprintId, action });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || `Failed to ${label} sprint`;
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
+  }
+
+  async function handleDeleteSprint(sprintId: string, sprintName: string) {
+    if (!confirm(`Are you sure you want to delete "${sprintName}"? Tasks will be unassigned to Backlog.`)) return;
+
+    setErrorMsg(null);
+    try {
+      await deleteSprintMutation.mutateAsync(sprintId);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to delete sprint';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
   }
 
   if (isLoading) {
@@ -106,19 +128,34 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
           </div>
         </div>
 
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+        <button onClick={() => { setShowForm(!showForm); setEditingSprint(null); }} className="btn-primary">
           <Plus className="w-4 h-4" />
           New Sprint
         </button>
       </div>
 
+      {errorMsg && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3.5 rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       {showForm && (
         <CreateSprintForm projectId={projectId} onClose={() => setShowForm(false)} />
       )}
 
+      {editingSprint && (
+        <EditSprintForm
+          projectId={projectId}
+          sprint={editingSprint}
+          onClose={() => setEditingSprint(null)}
+        />
+      )}
+
       {/* Sprints Cards */}
       <div className="space-y-4">
-        {sprints.length === 0 && !showForm && (
+        {sprints.length === 0 && !showForm && !editingSprint && (
           <div className="card p-10 text-center text-slate-500 text-sm">
             <Zap className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             No sprints created yet. Click <strong>New Sprint</strong> to plan your first iteration.
@@ -195,10 +232,29 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
+                  {/* Edit Sprint Button */}
+                  <button
+                    onClick={() => { setEditingSprint(sprint); setShowForm(false); }}
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                    title="Edit sprint details"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+
+                  {/* Delete Sprint Button */}
+                  <button
+                    onClick={() => handleDeleteSprint(sprint.id, sprint.name)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    title="Delete sprint"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
                   {sprint.status === 'PLANNING' && (
                     <button
-                      onClick={() => updateSprint(sprint.id, 'start')}
-                      className="bg-[#00c875] text-white hover:bg-emerald-600 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                      onClick={() => handleUpdateSprint(sprint.id, 'start')}
+                      disabled={updateSprintMutation.isPending}
+                      className="bg-[#00c875] text-white hover:bg-emerald-600 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       Start Sprint
@@ -206,8 +262,9 @@ export function SprintsList({ projectId, sprints, isLoading }: SprintsListProps)
                   )}
                   {sprint.status === 'ACTIVE' && (
                     <button
-                      onClick={() => updateSprint(sprint.id, 'complete')}
-                      className="bg-slate-800 text-white hover:bg-slate-900 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                      onClick={() => handleUpdateSprint(sprint.id, 'complete')}
+                      disabled={updateSprintMutation.isPending}
+                      className="bg-slate-800 text-white hover:bg-slate-900 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Complete Sprint
@@ -251,18 +308,26 @@ function CreateSprintForm({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [color, setColor] = useState('#00c875');
-  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const createSprintMutation = useCreateSprint(projectId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    await fetch(`/api/projects/${projectId}/sprints`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, goal, startDate, endDate, color }),
-    });
-    onClose();
-    window.location.reload();
+    setErrorMsg(null);
+    try {
+      await createSprintMutation.mutateAsync({
+        name,
+        goal: goal.trim() || undefined,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        color,
+      });
+      onClose();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to create sprint';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
   }
 
   return (
@@ -271,6 +336,14 @@ function CreateSprintForm({
       className="bg-white border border-slate-200 rounded-xl p-5 shadow-md space-y-4"
     >
       <h3 className="text-sm font-bold text-slate-900">Create New Sprint Iteration</h3>
+
+      {errorMsg && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Name *</label>
@@ -331,8 +404,150 @@ function CreateSprintForm({
         </div>
       </div>
       <div className="flex gap-2 pt-2">
-        <button type="submit" disabled={loading} className="btn-primary font-bold text-xs">
-          {loading ? 'Creating...' : 'Create Sprint'}
+        <button
+          type="submit"
+          disabled={createSprintMutation.isPending}
+          className="btn-primary font-bold text-xs disabled:opacity-50"
+        >
+          {createSprintMutation.isPending ? 'Creating...' : 'Create Sprint'}
+        </button>
+        <button type="button" onClick={onClose} className="btn-ghost text-xs">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function EditSprintForm({
+  projectId,
+  sprint,
+  onClose,
+}: {
+  projectId: string;
+  sprint: Sprint;
+  onClose: () => void;
+}) {
+  const formatDateForInput = (d: string | Date) => {
+    try {
+      return new Date(d).toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+
+  const [name, setName] = useState(sprint.name);
+  const [goal, setGoal] = useState(sprint.goal || '');
+  const [startDate, setStartDate] = useState(formatDateForInput(sprint.startDate));
+  const [endDate, setEndDate] = useState(formatDateForInput(sprint.endDate));
+  const [color, setColor] = useState(sprint.color || '#00c875');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const editSprintMutation = useEditSprintDetails(projectId);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg(null);
+    try {
+      await editSprintMutation.mutateAsync({
+        sprintId: sprint.id,
+        data: {
+          name,
+          goal: goal.trim() || undefined,
+          startDate: new Date(startDate).toISOString(),
+          endDate: new Date(endDate).toISOString(),
+          color,
+        },
+      });
+      onClose();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to update sprint';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white border border-blue-200 rounded-xl p-5 shadow-md space-y-4 ring-2 ring-blue-100"
+    >
+      <div className="flex items-center gap-2">
+        <Pencil className="w-4 h-4 text-blue-600" />
+        <h3 className="text-sm font-bold text-slate-900">Edit Sprint Details — {sprint.name}</h3>
+      </div>
+
+      {errorMsg && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Name *</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Goal</label>
+          <input
+            type="text"
+            value={goal}
+            onChange={e => setGoal(e.target.value)}
+            placeholder="Primary sprint goal..."
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date *</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">End Date *</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Theme Accent Color</label>
+          <div className="flex items-center gap-2">
+            {COLOR_OPTIONS.map(c => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => setColor(c)}
+                className={`w-7 h-7 rounded-lg border-2 transition-all ${
+                  color === c ? 'border-slate-900 scale-110 shadow-sm' : 'border-transparent hover:border-slate-300'
+                }`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2 pt-2">
+        <button
+          type="submit"
+          disabled={editSprintMutation.isPending}
+          className="btn-primary font-bold text-xs disabled:opacity-50"
+        >
+          {editSprintMutation.isPending ? 'Saving...' : 'Save Changes'}
         </button>
         <button type="button" onClick={onClose} className="btn-ghost text-xs">
           Cancel

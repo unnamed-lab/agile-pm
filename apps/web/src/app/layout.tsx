@@ -3,6 +3,7 @@ import { Inter, Teachers } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SessionProvider } from "@/providers/SessionProvider";
+import { QueryProvider } from "@/providers/QueryProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,7 +34,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${teachers.variable}`}>
       <body className="font-sans antialiased">
         <SessionProvider>
-          <ErrorBoundary>{children}</ErrorBoundary>
+          <QueryProvider>
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>

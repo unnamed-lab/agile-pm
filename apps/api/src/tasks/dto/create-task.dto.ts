@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { TaskStatus, Priority } from '@apms/database/generated/client';
 
 export class CreateTaskDto {
@@ -24,10 +24,10 @@ export class CreateTaskDto {
   storyPoints?: number = 0;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   assigneeId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   sprintId?: string;
 }

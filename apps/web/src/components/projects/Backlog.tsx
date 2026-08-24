@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
   ChevronRight,
@@ -11,11 +10,11 @@ import {
   Clock,
   AlertCircle,
   HelpCircle,
-  User,
-  Zap,
-  MoreHorizontal,
   Layers,
+  FolderPlus,
+  Zap,
 } from 'lucide-react';
+import { useCreateTask, useUpdateTask, useDeleteTask, useCreateSprint } from '@/hooks/useProjects';
 
 interface Task {
   id: string;
@@ -24,6 +23,7 @@ interface Task {
   priority: string;
   storyPoints: number;
   sprintId?: string | null;
+  assigneeId?: string | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
 }
 
@@ -31,12 +31,20 @@ interface Sprint {
   id: string;
   name: string;
   status: string;
+  color?: string;
+}
+
+interface Member {
+  userId: string;
+  role: string;
+  user: { id: string; name: string; avatarUrl?: string | null };
 }
 
 interface BacklogProps {
   projectId: string;
   tasks: Task[];
   sprints?: Sprint[];
+  members?: Member[];
 }
 
 const STATUS_CONFIG: Record<
@@ -46,7 +54,7 @@ const STATUS_CONFIG: Record<
   DONE: { label: 'Done', bg: 'bg-[#00c875] text-white', icon: CheckCircle2 },
   IN_PROGRESS: { label: 'Working on it', bg: 'bg-[#fdab3d] text-white', icon: Clock },
   IN_REVIEW: { label: 'In Review', bg: 'bg-[#a25ddc] text-white', icon: AlertCircle },
-  TODO: { label: 'Not Started', bg: 'bg-[#c4c4c4] text-white', icon: HelpCircle },
+  TODO: { label: 'Not Started', bg: 'bg-[#94a3b8] text-white', icon: HelpCircle },
 };
 
 const PRIORITY_CONFIG: Record<
@@ -67,38 +75,63 @@ const AVATAR_COLORS = [
   'bg-amber-500',
 ];
 
+const COLOR_OPTIONS = [
+  '#00c875',
+  '#0073ea',
+  '#fdab3d',
+  '#a25ddc',
+  '#e2445c',
+  '#00d2d2',
+  '#ff642f',
+  '#579bfc',
+];
+
 function getAvatarBg(name?: string) {
   if (!name) return 'bg-slate-400';
   return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
 
-export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
-  const router = useRouter();
+export function Backlog({ projectId, tasks = [], sprints = [], members = [] }: BacklogProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [newTaskTitle, setNewTaskTitle] = useState<Record<string, string>>({});
-  const [activeDropdown, setActiveDropdown] = useState<{
-    type: 'status' | 'priority' | 'sprint';
-    taskId: string;
-  } | null>(null);
+  const [newTaskPriority, setNewTaskPriority] = useState<Record<string, string>>({});
+  const [newTaskStatus, setNewTaskStatus] = useState<Record<string, string>>({});
+  const [newTaskAssignee, setNewTaskAssignee] = useState<Record<string, string>>({});
+
+  const [showAddGroupForm, setShowAddGroupForm] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupGoal, setNewGroupGoal] = useState('');
+  const [newGroupColor, setNewGroupColor] = useState('#00c875');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const createTaskMutation = useCreateTask(projectId);
+  const updateTaskMutation = useUpdateTask(projectId);
+  const deleteTaskMutation = useDeleteTask(projectId);
+  const createSprintMutation = useCreateSprint(projectId);
 
   const toggleGroup = (groupId: string) => {
     setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  async function updateTask(taskId: string, payload: Partial<Task>) {
-    await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    setActiveDropdown(null);
-    router.refresh();
+  async function handleUpdateTask(taskId: string, payload: any) {
+    setErrorMsg(null);
+    try {
+      await updateTaskMutation.mutateAsync({ taskId, payload });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to update task';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
   }
 
-  async function deleteTask(taskId: string) {
+  async function handleDeleteTask(taskId: string) {
     if (!confirm('Delete this task?')) return;
-    await fetch(`/api/projects/${projectId}/tasks/${taskId}`, { method: 'DELETE' });
-    router.refresh();
+    setErrorMsg(null);
+    try {
+      await deleteTaskMutation.mutateAsync(taskId);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to delete task';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
   }
 
   async function handleCreateTask(groupSprintId?: string | null) {
@@ -106,20 +139,46 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
     const title = newTaskTitle[key]?.trim();
     if (!title) return;
 
-    await fetch(`/api/projects/${projectId}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    setErrorMsg(null);
+    try {
+      await createTaskMutation.mutateAsync({
         title,
-        priority: 'MEDIUM',
-        status: 'TODO',
+        priority: newTaskPriority[key] || 'MEDIUM',
+        status: newTaskStatus[key] || 'TODO',
         storyPoints: 3,
-        sprintId: groupSprintId || null,
-      }),
-    });
+        sprintId: groupSprintId || undefined,
+        assigneeId: newTaskAssignee[key] || undefined,
+      });
+      setNewTaskTitle(prev => ({ ...prev, [key]: '' }));
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to create task';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
+  }
 
-    setNewTaskTitle(prev => ({ ...prev, [key]: '' }));
-    router.refresh();
+  async function handleCreateGroup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+
+    setErrorMsg(null);
+    const startDate = new Date().toISOString();
+    const endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+      await createSprintMutation.mutateAsync({
+        name: newGroupName.trim(),
+        goal: newGroupGoal.trim() || undefined,
+        startDate,
+        endDate,
+        color: newGroupColor,
+      });
+      setNewGroupName('');
+      setNewGroupGoal('');
+      setShowAddGroupForm(false);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to create new group';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
   }
 
   // Groups definition: Sprints + Unassigned Backlog
@@ -128,7 +187,7 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
       id: s.id,
       title: s.name,
       status: s.status,
-      color: s.status === 'ACTIVE' ? '#00c875' : s.status === 'PLANNING' ? '#fdab3d' : '#94a3b8',
+      color: s.color || (s.status === 'ACTIVE' ? '#00c875' : s.status === 'PLANNING' ? '#fdab3d' : '#94a3b8'),
       sprintId: s.id as string | null,
       tasks: tasks.filter(t => t.sprintId === s.id),
     })),
@@ -158,21 +217,108 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
-          <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg text-emerald-700">
-            <span className="w-2 h-2 rounded-full bg-[#00c875]" />
-            {tasks.filter(t => t.status === 'DONE').length} Done
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 text-xs font-medium text-slate-600 mr-2 hidden md:flex">
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg text-emerald-700 font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#00c875]" />
+              {tasks.filter(t => t.status === 'DONE').length} Done
+            </div>
+            <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg text-amber-700 font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#fdab3d]" />
+              {tasks.filter(t => t.status === 'IN_PROGRESS').length} Working
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700 font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#94a3b8]" />
+              {tasks.filter(t => t.status === 'TODO').length} Not Started
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg text-amber-700">
-            <span className="w-2 h-2 rounded-full bg-[#fdab3d]" />
-            {tasks.filter(t => t.status === 'IN_PROGRESS').length} Working
-          </div>
-          <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700">
-            <span className="w-2 h-2 rounded-full bg-[#c4c4c4]" />
-            {tasks.filter(t => t.status === 'TODO').length} Not Started
-          </div>
+
+          <button
+            onClick={() => setShowAddGroupForm(!showAddGroupForm)}
+            className="btn-primary flex items-center gap-1.5 text-xs font-bold"
+          >
+            <FolderPlus className="w-4 h-4" />
+            New Group / Sprint
+          </button>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3.5 rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* Add New Group Form */}
+      {showAddGroupForm && (
+        <form
+          onSubmit={handleCreateGroup}
+          className="bg-white border border-slate-200 rounded-xl p-5 shadow-md space-y-3"
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">Add New Sprint Group</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Group Name *</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={e => setNewGroupName(e.target.value)}
+                placeholder="e.g. Sprint 4 — Frontend Polish"
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Goal (Optional)</label>
+              <input
+                type="text"
+                value={newGroupGoal}
+                onChange={e => setNewGroupGoal(e.target.value)}
+                placeholder="What is the objective of this group?"
+                className="input"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Group Color Theme</label>
+            <div className="flex items-center gap-2">
+              {COLOR_OPTIONS.map(c => (
+                <button
+                  type="button"
+                  key={c}
+                  onClick={() => setNewGroupColor(c)}
+                  className={`w-6 h-6 rounded-lg border-2 transition-all ${
+                    newGroupColor === c ? 'border-slate-900 scale-110' : 'border-transparent hover:border-slate-300'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={createSprintMutation.isPending}
+              className="btn-primary text-xs font-bold disabled:opacity-50"
+            >
+              {createSprintMutation.isPending ? 'Creating Group...' : 'Create Group'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddGroupForm(false)}
+              className="btn-ghost text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Monday Style Groups */}
       {groups.map(group => {
@@ -182,14 +328,15 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
         const doneCount = groupTasks.filter(t => t.status === 'DONE').length;
         const inProgCount = groupTasks.filter(t => t.status === 'IN_PROGRESS').length;
         const totalCount = groupTasks.length;
+        const key = group.id || 'backlog';
 
         return (
           <div
             key={group.id}
-            className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200"
+            className="bg-white border border-slate-200 rounded-xl shadow-sm transition-all duration-200 overflow-visible"
           >
             {/* Group Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-200">
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-200 rounded-t-xl">
               <div className="flex items-center gap-2.5">
                 <button
                   onClick={() => toggleGroup(group.id)}
@@ -241,15 +388,15 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
             {/* Group Content (Table) */}
             {!isCollapsed && (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="py-2.5 px-4 w-10 text-center">#</th>
-                      <th className="py-2.5 px-4 min-w-[240px]">Task Name</th>
+                      <th className="py-2.5 px-4 min-w-[220px]">Task Name</th>
                       <th className="py-2.5 px-4 w-36 text-center">Status</th>
                       <th className="py-2.5 px-4 w-28 text-center">Priority</th>
                       <th className="py-2.5 px-4 w-24 text-center">Points</th>
-                      <th className="py-2.5 px-4 w-36">Assignee</th>
+                      <th className="py-2.5 px-4 w-44">Assignee</th>
                       <th className="py-2.5 px-4 w-12 text-center"></th>
                     </tr>
                   </thead>
@@ -258,7 +405,6 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
                     {groupTasks.map((task, idx) => {
                       const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.TODO;
                       const priorityCfg = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.MEDIUM;
-                      const StatusIcon = statusCfg.icon;
 
                       return (
                         <tr
@@ -275,105 +421,77 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
                             <span>{task.title}</span>
                           </td>
 
-                          {/* Status Badge (Monday Popover) */}
-                          <td className="py-3 px-3 text-center relative">
-                            <button
-                              onClick={() =>
-                                setActiveDropdown(
-                                  activeDropdown?.taskId === task.id &&
-                                    activeDropdown.type === 'status'
-                                    ? null
-                                    : { type: 'status', taskId: task.id }
-                                )
-                              }
-                              className={`w-full py-1.5 px-3 rounded-md font-semibold text-xs transition-transform active:scale-95 flex items-center justify-center gap-1.5 shadow-sm ${statusCfg.bg}`}
+                          {/* Status Badge Select */}
+                          <td className="py-3 px-2 text-center">
+                            <select
+                              value={task.status}
+                              onChange={e => handleUpdateTask(task.id, { status: e.target.value })}
+                              className={`py-1.5 px-3 rounded-lg font-bold text-xs cursor-pointer shadow-sm focus:outline-none transition-all ${statusCfg.bg}`}
                             >
-                              <StatusIcon className="w-3.5 h-3.5" />
-                              <span>{statusCfg.label}</span>
-                            </button>
-
-                            {/* Status Selector Dropdown */}
-                            {activeDropdown?.taskId === task.id &&
-                              activeDropdown.type === 'status' && (
-                                <div className="absolute z-20 top-12 left-1/2 -translate-x-1/2 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 w-44 space-y-1">
-                                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                                    <button
-                                      key={key}
-                                      onClick={() => updateTask(task.id, { status: key })}
-                                      className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${cfg.bg}`}
-                                    >
-                                      <cfg.icon className="w-3.5 h-3.5" />
-                                      {cfg.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
+                              <option value="TODO" className="bg-white text-slate-800 font-semibold">Not Started</option>
+                              <option value="IN_PROGRESS" className="bg-white text-slate-800 font-semibold">Working on it</option>
+                              <option value="IN_REVIEW" className="bg-white text-slate-800 font-semibold">In Review</option>
+                              <option value="DONE" className="bg-white text-slate-800 font-semibold">Done</option>
+                            </select>
                           </td>
 
-                          {/* Priority Badge */}
-                          <td className="py-3 px-3 text-center relative">
-                            <button
-                              onClick={() =>
-                                setActiveDropdown(
-                                  activeDropdown?.taskId === task.id &&
-                                    activeDropdown.type === 'priority'
-                                    ? null
-                                    : { type: 'priority', taskId: task.id }
-                                )
-                              }
-                              className={`w-full py-1.5 px-2.5 rounded-md font-semibold text-xs transition-transform active:scale-95 flex items-center justify-center gap-1 shadow-sm ${priorityCfg.bg}`}
+                          {/* Priority Badge Select */}
+                          <td className="py-3 px-2 text-center">
+                            <select
+                              value={task.priority}
+                              onChange={e => handleUpdateTask(task.id, { priority: e.target.value })}
+                              className={`py-1.5 px-2.5 rounded-lg font-bold text-xs cursor-pointer shadow-sm focus:outline-none transition-all ${priorityCfg.bg}`}
                             >
-                              {priorityCfg.label}
-                            </button>
-
-                            {/* Priority Dropdown */}
-                            {activeDropdown?.taskId === task.id &&
-                              activeDropdown.type === 'priority' && (
-                                <div className="absolute z-20 top-12 left-1/2 -translate-x-1/2 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 w-32 space-y-1">
-                                  {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
-                                    <button
-                                      key={key}
-                                      onClick={() => updateTask(task.id, { priority: key })}
-                                      className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold text-center transition-all ${cfg.bg}`}
-                                    >
-                                      {cfg.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
+                              <option value="HIGH" className="bg-white text-slate-800 font-semibold">High</option>
+                              <option value="MEDIUM" className="bg-white text-slate-800 font-semibold">Medium</option>
+                              <option value="LOW" className="bg-white text-slate-800 font-semibold">Low</option>
+                            </select>
                           </td>
 
                           {/* Story Points */}
                           <td className="py-3 px-4 text-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
+                            <button
+                              onClick={() => {
+                                const ptsStr = prompt('Enter story points (0-100):', String(task.storyPoints || 0));
+                                if (ptsStr !== null) {
+                                  const pts = parseInt(ptsStr, 10);
+                                  if (!isNaN(pts)) handleUpdateTask(task.id, { storyPoints: pts });
+                                }
+                              }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                              title="Click to edit story points"
+                            >
                               {task.storyPoints || 0}
-                            </span>
+                            </button>
                           </td>
 
-                          {/* Assignee */}
-                          <td className="py-3 px-4">
-                            {task.assignee ? (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-6 h-6 rounded-full ${getAvatarBg(
-                                    task.assignee.name
-                                  )} text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm`}
-                                >
+                          {/* Assignee Select */}
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              {task.assignee && (
+                                <div className={`w-6 h-6 rounded-full ${getAvatarBg(task.assignee.name)} text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm`}>
                                   {task.assignee.name.charAt(0).toUpperCase()}
                                 </div>
-                                <span className="text-xs text-slate-700 font-medium truncate max-w-[100px]">
-                                  {task.assignee.name}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">Unassigned</span>
-                            )}
+                              )}
+                              <select
+                                value={task.assigneeId || task.assignee?.id || ''}
+                                onChange={e => handleUpdateTask(task.id, { assigneeId: e.target.value || null })}
+                                className="bg-white border border-slate-200 text-xs py-1 px-2 rounded-md font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-[140px]"
+                              >
+                                <option value="">Unassigned</option>
+                                {members.map(m => (
+                                  <option key={m.userId} value={m.userId}>
+                                    {m.user.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </td>
 
                           {/* Actions */}
                           <td className="py-3 px-4 text-center">
                             <button
-                              onClick={() => deleteTask(task.id)}
+                              onClick={() => handleDeleteTask(task.id)}
                               className="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded hover:bg-slate-100"
                               title="Delete task"
                             >
@@ -384,33 +502,69 @@ export function Backlog({ projectId, tasks = [], sprints = [] }: BacklogProps) {
                       );
                     })}
 
-                    {/* Add Task Input Row */}
-                    <tr className="bg-slate-50/40 border-t border-slate-200">
-                      <td className="py-2.5 px-4 text-center text-slate-400">
+                    {/* Add Task Options Bar */}
+                    <tr className="bg-slate-50/50 border-t border-slate-200">
+                      <td className="py-3 px-4 text-center text-slate-400">
                         <Plus className="w-4 h-4 mx-auto" />
                       </td>
                       <td colSpan={6} className="py-2 px-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <input
                             type="text"
-                            value={newTaskTitle[group.id || 'backlog'] || ''}
+                            value={newTaskTitle[key] || ''}
                             onChange={e =>
                               setNewTaskTitle(prev => ({
                                 ...prev,
-                                [group.id || 'backlog']: e.target.value,
+                                [key]: e.target.value,
                               }))
                             }
                             onKeyDown={e => {
                               if (e.key === 'Enter') handleCreateTask(group.sprintId);
                             }}
-                            placeholder="+ Add task to this group..."
-                            className="flex-1 bg-transparent text-xs py-1.5 px-2 border-none focus:outline-none focus:ring-0 text-slate-800 placeholder:text-slate-400 font-medium"
+                            placeholder={`+ Add task to ${group.title}...`}
+                            className="flex-1 min-w-[180px] bg-white text-xs py-1.5 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 font-medium"
                           />
+
+                          <select
+                            value={newTaskPriority[key] || 'MEDIUM'}
+                            onChange={e => setNewTaskPriority(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="bg-white text-xs py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 font-semibold"
+                          >
+                            <option value="HIGH">High Priority</option>
+                            <option value="MEDIUM">Medium Priority</option>
+                            <option value="LOW">Low Priority</option>
+                          </select>
+
+                          <select
+                            value={newTaskStatus[key] || 'TODO'}
+                            onChange={e => setNewTaskStatus(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="bg-white text-xs py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 font-semibold"
+                          >
+                            <option value="TODO">Not Started</option>
+                            <option value="IN_PROGRESS">Working on it</option>
+                            <option value="IN_REVIEW">In Review</option>
+                            <option value="DONE">Done</option>
+                          </select>
+
+                          <select
+                            value={newTaskAssignee[key] || ''}
+                            onChange={e => setNewTaskAssignee(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="bg-white text-xs py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 font-semibold max-w-[130px]"
+                          >
+                            <option value="">Unassigned</option>
+                            {members.map(m => (
+                              <option key={m.userId} value={m.userId}>
+                                {m.user.name}
+                              </option>
+                            ))}
+                          </select>
+
                           <button
                             onClick={() => handleCreateTask(group.sprintId)}
-                            className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1 rounded-md hover:bg-emerald-700 transition-all shrink-0"
+                            disabled={createTaskMutation.isPending}
+                            className="bg-emerald-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-emerald-700 transition-all shrink-0 disabled:opacity-50 shadow-sm"
                           >
-                            Add
+                            {createTaskMutation.isPending ? 'Adding...' : 'Add Task'}
                           </button>
                         </div>
                       </td>

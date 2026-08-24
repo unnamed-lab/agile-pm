@@ -58,6 +58,29 @@ export class SprintsController {
     return this.sprintsService.completeSprint(projectId, sprintId, user.id);
   }
 
+  @Patch(':sprintId')
+  @UseGuards(ProjectRoleGuard)
+  @RequireProjectRole('SCRUM_MASTER')
+  update(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @CurrentUser() user,
+    @Body() dto: any,
+  ) {
+    return this.sprintsService.update(projectId, sprintId, user.id, dto);
+  }
+
+  @Delete(':sprintId')
+  @UseGuards(ProjectRoleGuard)
+  @RequireProjectRole('SCRUM_MASTER')
+  remove(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @CurrentUser() user,
+  ) {
+    return this.sprintsService.remove(projectId, sprintId, user.id);
+  }
+
   @Get(':sprintId/burndown')
   getBurndown(
     @Param('projectId') projectId: string,

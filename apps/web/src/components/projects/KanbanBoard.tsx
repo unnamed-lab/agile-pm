@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { GripVertical, User, CheckCircle2, Clock, AlertCircle, HelpCircle, Plus } from 'lucide-react';
+import { GripVertical, User, CheckCircle2, Clock, AlertCircle, HelpCircle } from 'lucide-react';
+import { useMoveTask } from '@/hooks/useProjects';
 
 interface Task {
   id: string;
@@ -70,19 +70,19 @@ function getAvatarBg(name?: string) {
 }
 
 export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
-  const router = useRouter();
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
+  const moveTaskMutation = useMoveTask(projectId);
+
   const tasksByStatus = (status: string) => tasks.filter(t => t.status === status);
 
-  async function moveTask(taskId: string, newStatus: string) {
-    await fetch(`/api/projects/${projectId}/tasks/${taskId}/move`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    router.refresh();
+  async function handleMoveTask(taskId: string, newStatus: string) {
+    try {
+      await moveTaskMutation.mutateAsync({ taskId, status: newStatus });
+    } catch (err) {
+      console.error('Failed to move task:', err);
+    }
   }
 
   return (
@@ -103,7 +103,7 @@ export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
             onDrop={() => {
               setDragOverCol(null);
               if (draggedTask && draggedTask.status !== col.status) {
-                moveTask(draggedTask.id, col.status);
+                handleMoveTask(draggedTask.id, col.status);
               }
             }}
             className={`flex flex-col rounded-xl border transition-all duration-200 shadow-sm ${
@@ -112,7 +112,7 @@ export function KanbanBoard({ projectId, tasks = [] }: KanbanBoardProps) {
                 : 'border-slate-200 bg-slate-50/60'
             }`}
           >
-            {/* Monday Column Header Banner */}
+            {/* Column Header Banner */}
             <div className={`${col.headerBg} text-white px-4 py-3 rounded-t-xl flex items-center justify-between shadow-sm`}>
               <div className="flex items-center gap-2">
                 <Icon className="w-4 h-4" />

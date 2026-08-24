@@ -163,6 +163,47 @@ export class SprintsService {
     });
   }
 
+  async update(projectId: string, sprintId: string, userId: string, dto: any) {
+    const sprint = await this.prisma.sprint.findFirst({
+      where: { id: sprintId, projectId },
+    });
+    if (!sprint) throw new NotFoundException('Sprint not found');
+
+    const data: any = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.goal !== undefined) data.goal = dto.goal;
+    if (dto.color !== undefined) data.color = dto.color;
+    if (dto.startDate !== undefined) data.startDate = new Date(dto.startDate);
+    if (dto.endDate !== undefined) data.endDate = new Date(dto.endDate);
+
+    const updated = await this.prisma.sprint.update({
+      where: { id: sprintId },
+      data,
+    });
+
+    await this.activity.log(projectId, userId, 'SPRINT_UPDATED', { sprintName: updated.name });
+    return updated;
+  }
+
+  async remove(projectId: string, sprintId: string, userId: string) {
+    const sprint = await this.prisma.sprint.findFirst({
+      where: { id: sprintId, projectId },
+    });
+    if (!sprint) throw new NotFoundException('Sprint not found');
+
+    await this.prisma.task.updateMany({
+      where: { sprintId },
+      data: { sprintId: null },
+    });
+
+    await this.prisma.sprint.delete({
+      where: { id: sprintId },
+    });
+
+    await this.activity.log(projectId, userId, 'SPRINT_DELETED', { sprintName: sprint.name });
+    return { message: 'Sprint deleted successfully' };
+  }
+
   private getDayRange(start: Date, end: Date): Date[] {
     const days: Date[] = [];
     const current = new Date(start);
