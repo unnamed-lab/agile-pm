@@ -4,8 +4,8 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: cd apps/api && pnpm install --frozen-lockfile && pnpm run build
-    startCommand: cd apps/api && pnpm start
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build --filter=api
+    startCommand: pnpm --filter=api start
     envVars:
       - key: NODE_ENV
         value: production
@@ -28,8 +28,8 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: cd apps/web && pnpm install --frozen-lockfile && pnpm run build
-    startCommand: cd apps/web && pnpm start
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build --filter=web
+    startCommand: pnpm --filter=web start
     envVars:
       - key: NODE_ENV
         value: production
