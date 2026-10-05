@@ -9,11 +9,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const connectionString = process.env.DATABASE_URL;
-const isRemote = connectionString?.includes('render.com') || connectionString?.includes('sslmode') || process.env.NODE_ENV === 'production';
+const isLocal = !connectionString || connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
 
 const pool = new Pool({
   connectionString,
-  ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+  ssl: isLocal ? false : { rejectUnauthorized: false },
 });
 
 const adapter = new PrismaPg(pool);
