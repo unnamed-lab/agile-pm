@@ -35,12 +35,29 @@ export class ProjectsService {
     return project;
   }
 
+  private async getWhereClauseForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (user?.role === 'ADMIN') {
+      return { deletedAt: null };
+    }
+
+    return {
+      deletedAt: null,
+      OR: [
+        { members: { some: { userId } } },
+        { supervisorId: userId },
+      ],
+    };
+  }
+
   async findAllForUser(userId: string) {
+    const where = await this.getWhereClauseForUser(userId);
     return this.prisma.project.findMany({
-      where: {
-        deletedAt: null,
-        members: { some: { userId } },
-      },
+      where,
       include: this.projectIncludes(),
       orderBy: { updatedAt: 'desc' },
     });
@@ -181,11 +198,9 @@ export class ProjectsService {
   }
 
   async getUserDashboardSummary(userId: string) {
+    const where = await this.getWhereClauseForUser(userId);
     const userProjects = await this.prisma.project.findMany({
-      where: {
-        deletedAt: null,
-        members: { some: { userId } },
-      },
+      where,
       select: { id: true, name: true },
     });
 

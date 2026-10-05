@@ -123,6 +123,7 @@ async function main() {
       supervisorId: supervisor1.id,
       members: {
         create: [
+          { userId: admin.id, role: 'SCRUM_MASTER' },
           { userId: sm1.id, role: 'SCRUM_MASTER' },
           { userId: dev1.id, role: 'DEVELOPER' },
           { userId: dev2.id, role: 'DEVELOPER' },
