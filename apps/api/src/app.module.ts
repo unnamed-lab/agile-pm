@@ -10,6 +10,8 @@ import { TasksModule } from './tasks/tasks.module';
 import { ActivityModule } from './activity/activity.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
+import { AppController } from './app.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -23,5 +25,6 @@ import { NotificationsModule } from './notifications/notifications.module';
     ActivityModule,
     NotificationsModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
